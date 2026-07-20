@@ -38,6 +38,8 @@ EXPO_PUBLIC_API_URL=http://127.0.0.1:8080
 EXPO_PUBLIC_DEFAULT_TENANT=dom-corte
 ```
 
+**Produção:** `EXPO_PUBLIC_API_URL=https://barber.wynext.online` (ver `mobile/.env.production.example` e `eas.json`).
+
 No emulador Android use `http://10.0.2.2:8080`. No device físico, use o IP da máquina na rede local.
 
 ### Credenciais demo

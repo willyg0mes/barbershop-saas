@@ -7,6 +7,8 @@ on:
       - "api/**"
       - ".github/workflows/api-ci.yml"
       - "docker-compose.dev.yml"
+      - "docker-compose.prod.yml"
+      - "deploy/**"
   pull_request:
     branches: [main]
     paths:

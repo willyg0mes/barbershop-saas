@@ -25,3 +25,19 @@ USER www-data
 
 EXPOSE 9000
 CMD ["php-fpm"]
+
+FROM base AS production
+
+COPY api/composer.json api/composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --optimize-autoloader
+
+COPY api/ .
+RUN composer dump-autoload --optimize \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+COPY deploy/api/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 9000
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["php-fpm"]
