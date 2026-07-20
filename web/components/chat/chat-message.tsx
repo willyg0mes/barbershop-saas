@@ -1,7 +1,7 @@
 "use client";
 
+import { ChatAvatar } from "@/components/chat/chat-avatar";
 import { cn } from "@/lib/utils";
-import { Bot, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 
 type ChatBubbleProps = {
@@ -9,68 +9,83 @@ type ChatBubbleProps = {
   children: ReactNode;
   time?: string;
   className?: string;
+  tenantName?: string;
+  tenantLogo?: string | null;
+  userName?: string;
+  delayMs?: number;
 };
 
-export function ChatBubble({ role, children, time, className }: ChatBubbleProps) {
+export function ChatBubble({
+  role,
+  children,
+  time,
+  className,
+  tenantName,
+  tenantLogo,
+  userName,
+  delayMs = 0,
+}: ChatBubbleProps) {
   const isBot = role === "bot";
 
   return (
     <div
       className={cn(
-        "flex w-full gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300",
+        "flex w-full gap-2 animate-in fade-in slide-in-from-bottom-3 duration-500 fill-mode-backwards",
         isBot ? "justify-start" : "justify-end",
         className,
       )}
+      style={{ animationDelay: `${delayMs}ms` }}
     >
       {isBot ? (
-        <div
-          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-          style={{ backgroundColor: "var(--tenant-secondary)", color: "#111" }}
-        >
-          <Bot className="h-4 w-4" />
-        </div>
+        <ChatAvatar
+          variant="bot"
+          tenantName={tenantName}
+          logoUrl={tenantLogo}
+          className="mt-1"
+        />
       ) : null}
 
-      <div className={cn("flex max-w-[88%] flex-col gap-1", !isBot && "items-end")}>
+      <div className={cn("flex max-w-[82%] flex-col gap-1", !isBot && "items-end")}>
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
+            "rounded-[1.25rem] px-4 py-3 text-[15px] leading-snug shadow-sm transition-transform active:scale-[0.98]",
             isBot
-              ? "rounded-tl-md border border-white/5 bg-card/90 text-card-foreground backdrop-blur-md"
-              : "rounded-tr-md text-[#111] shadow-md",
+              ? "rounded-tl-sm border border-white/8 bg-card/95 text-card-foreground backdrop-blur-md"
+              : "rounded-tr-sm font-medium text-[#111] shadow-lg",
           )}
           style={
             !isBot
-              ? { backgroundColor: "var(--tenant-secondary)" }
+              ? {
+                  backgroundColor: "var(--tenant-secondary)",
+                  boxShadow: "0 4px 14px color-mix(in srgb, var(--tenant-secondary) 35%, transparent)",
+                }
               : undefined
           }
         >
           {children}
         </div>
         {time ? (
-          <span className="px-1 text-[10px] text-muted-foreground">{time}</span>
+          <span className="px-1 text-[10px] text-muted-foreground/80">{time}</span>
         ) : null}
       </div>
 
       {!isBot ? (
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-          <UserRound className="h-4 w-4 text-muted-foreground" />
-        </div>
+        <ChatAvatar variant="user" name={userName} className="mt-1" />
       ) : null}
     </div>
   );
 }
 
-export function TypingIndicator() {
+type TypingIndicatorProps = {
+  tenantName?: string;
+  tenantLogo?: string | null;
+};
+
+export function TypingIndicator({ tenantName, tenantLogo }: TypingIndicatorProps) {
   return (
-    <div className="flex justify-start gap-2.5">
-      <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-        style={{ backgroundColor: "var(--tenant-secondary)", color: "#111" }}
-      >
-        <Bot className="h-4 w-4" />
-      </div>
-      <div className="flex items-center gap-1 rounded-2xl rounded-tl-md border border-white/5 bg-card/90 px-4 py-3 backdrop-blur-md">
+    <div className="flex animate-in fade-in duration-300 justify-start gap-2">
+      <ChatAvatar variant="bot" tenantName={tenantName} logoUrl={tenantLogo} className="mt-1" />
+      <div className="flex items-center gap-1.5 rounded-[1.25rem] rounded-tl-sm border border-white/8 bg-card/95 px-4 py-3.5 backdrop-blur-md">
         <span className="chat-typing-dot" />
         <span className="chat-typing-dot animation-delay-150" />
         <span className="chat-typing-dot animation-delay-300" />

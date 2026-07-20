@@ -1,4 +1,5 @@
 import { ChatBooking } from "@/components/chat/chat-booking";
+import { MobileShell } from "@/components/chat/mobile-shell";
 import { fetchBarbers, fetchServices, fetchTenantBranding } from "@/lib/api";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -16,12 +17,17 @@ export async function generateMetadata({
     const branding = await fetchTenantBranding(tenant);
 
     return {
-      title: `${branding.name} — Agendar horário`,
-      description: `Agende online na ${branding.name}`,
+      title: `${branding.name} — Agendar`,
+      description: `Agende na ${branding.name} pelo celular`,
       themeColor: branding.primary_color,
       appleWebApp: {
         capable: true,
+        statusBarStyle: "black-translucent",
         title: branding.name,
+      },
+      formatDetection: {
+        telephone: true,
+        email: true,
       },
     };
   } catch {
@@ -40,11 +46,13 @@ export default async function TenantPage({ params }: TenantPageProps) {
     ]);
 
     return (
-      <ChatBooking
-        tenant={branding}
-        initialServices={services}
-        initialBarbers={barbers}
-      />
+      <MobileShell>
+        <ChatBooking
+          tenant={branding}
+          initialServices={services}
+          initialBarbers={barbers}
+        />
+      </MobileShell>
     );
   } catch {
     notFound();

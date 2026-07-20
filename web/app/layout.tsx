@@ -29,6 +29,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -39,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] overflow-hidden overscroll-none antialiased touch-manipulation`}
       >
         {children}
       </body>

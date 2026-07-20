@@ -39,7 +39,7 @@ export default async function TenantLayout({
     } as CSSProperties;
 
     return (
-      <div style={themeStyle} className="min-h-[100dvh] bg-background">
+      <div style={themeStyle} className="h-[100dvh] overflow-hidden bg-black">
         {children}
       </div>
     );
