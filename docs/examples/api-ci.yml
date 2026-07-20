@@ -1,0 +1,50 @@
+name: API CI
+
+on:
+  push:
+    branches: [main, "step-*"]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+      - "docker-compose.dev.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  test:
+    name: Migrations & Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+
+      - name: Run migrations
+        run: php artisan migrate --force --no-interaction
+
+      - name: Run seeders
+        run: php artisan db:seed --force --no-interaction
+
+      - name: Run PHPUnit
+        run: php artisan test

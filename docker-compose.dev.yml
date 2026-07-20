@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: barbershop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: barbershop
+      POSTGRES_USER: barbershop
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barbershop -d barbershop"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: barbershop-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: development
+    container_name: barbershop-api
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./api:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: barbershop
+      DB_USERNAME: barbershop
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8000"
+    command: >
+      sh -c "composer install --prefer-dist
+      && php artisan key:generate --force --no-interaction || true
+      && php artisan migrate --force
+      && php artisan db:seed --force
+      && php artisan serve --host=0.0.0.0 --port=8000"
+
+volumes:
+  pgdata:
