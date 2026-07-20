@@ -15,6 +15,17 @@ Nunca commitar valores reais. Configure em **Settings → Secrets and variables 
 
 Secrets ainda **não configurados** no repositório. Serão criados nos passos correspondentes e documentados no PR de cada step.
 
+### CI workflow
+
+O arquivo de exemplo está em `docs/examples/api-ci.yml`. Para ativar:
+
+```bash
+gh auth refresh -h github.com -s workflow,repo
+mkdir -p .github/workflows
+cp docs/examples/api-ci.yml .github/workflows/api-ci.yml
+git add .github/workflows/api-ci.yml && git commit -m "ci: enable API GitHub Actions workflow" && git push
+```
+
 ## Checklist local
 
 ```bash
