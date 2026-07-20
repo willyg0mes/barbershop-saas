@@ -333,6 +333,13 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+.chat-date-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .chat-date-day-active {
   background: var(--tenant-secondary);
   color: #111;

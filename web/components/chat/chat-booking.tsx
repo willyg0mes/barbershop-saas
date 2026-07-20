@@ -513,7 +513,7 @@ export function ChatBooking({
       ) : null}
 
       {!typing && step === "datetime" ? (
-        <ChatBubble role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
+        <ChatBubble wide role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold">Escolha a data</p>

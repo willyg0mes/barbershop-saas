@@ -13,6 +13,8 @@ type ChatBubbleProps = {
   tenantLogo?: string | null;
   userName?: string;
   delayMs?: number;
+  /** Bolha mais larga (calendário, grades de horário). */
+  wide?: boolean;
 };
 
 export function ChatBubble({
@@ -24,6 +26,7 @@ export function ChatBubble({
   tenantLogo,
   userName,
   delayMs = 0,
+  wide = false,
 }: ChatBubbleProps) {
   const isBot = role === "bot";
 
@@ -45,10 +48,17 @@ export function ChatBubble({
         />
       ) : null}
 
-      <div className={cn("flex max-w-[82%] flex-col gap-1", !isBot && "items-end")}>
+      <div
+        className={cn(
+          "flex flex-col gap-1",
+          wide ? "min-w-0 flex-1 max-w-[calc(100%-2.75rem)]" : "max-w-[82%]",
+          !isBot && "items-end",
+        )}
+      >
         <div
           className={cn(
-            "rounded-[1.25rem] px-4 py-3 text-[15px] leading-snug shadow-sm transition-transform active:scale-[0.98]",
+            "rounded-[1.25rem] text-[15px] leading-snug shadow-sm transition-transform active:scale-[0.98]",
+            wide ? "px-3 py-3.5 sm:px-4" : "px-4 py-3",
             isBot
               ? "rounded-tl-sm border border-white/8 bg-card/95 text-card-foreground backdrop-blur-md"
               : "rounded-tr-sm font-medium text-[#111] shadow-lg",
