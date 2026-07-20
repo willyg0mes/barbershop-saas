@@ -39,34 +39,8 @@ export default async function TenantLayout({
     } as CSSProperties;
 
     return (
-      <div style={themeStyle} className="min-h-screen">
-        <div
-          className="border-b px-4 py-3"
-          style={{ backgroundColor: "var(--tenant-primary)", color: "var(--tenant-accent)" }}
-        >
-          <div className="mx-auto flex max-w-xl items-center gap-3">
-            {branding.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={branding.logo_url}
-                alt={branding.name}
-                className="h-8 w-8 rounded-full object-cover"
-              />
-            ) : (
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold"
-                style={{
-                  backgroundColor: "var(--tenant-secondary)",
-                  color: "#111",
-                }}
-              >
-                {branding.name.slice(0, 1)}
-              </div>
-            )}
-            <span className="font-medium">{branding.name}</span>
-          </div>
-        </div>
-        <main className="mx-auto max-w-xl px-4 py-6">{children}</main>
+      <div style={themeStyle} className="min-h-[100dvh] bg-background">
+        {children}
       </div>
     );
   } catch {
