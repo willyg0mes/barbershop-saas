@@ -12,6 +12,11 @@
 | POST | `/tenants/{slug}/auth/login` | — | Login Sanctum (token Bearer) |
 | GET | `/auth/me` | Bearer | Perfil autenticado |
 | POST | `/auth/logout` | Bearer | Revogar token atual |
+| PATCH | `/auth/fcm-token` | Bearer (staff) | Registrar token push |
+| GET | `/appointments?date=` | Bearer (staff) | Agenda do dia |
+| GET | `/appointments/{id}` | Bearer (staff) | Detalhe do agendamento |
+| PATCH | `/appointments/{id}` | Bearer (staff) | Atualizar status |
+| GET | `/finance/summary?date=` | Bearer (staff) | Resumo financeiro do dia |
 
 ## Disponibilidade
 
