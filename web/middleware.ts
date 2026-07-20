@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 const DEFAULT_TENANT = process.env.NEXT_PUBLIC_DEFAULT_TENANT || "dom-corte";
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost";
+const RESERVED_SUBDOMAINS = new Set(["www", "app", "barber"]);
 
 function extractSubdomain(host: string): string | null {
   const hostname = host.split(":")[0].toLowerCase();
@@ -13,7 +14,7 @@ function extractSubdomain(host: string): string | null {
 
   if (hostname.endsWith(".localhost")) {
     const [subdomain] = hostname.split(".");
-    return subdomain || null;
+    return subdomain && !RESERVED_SUBDOMAINS.has(subdomain) ? subdomain : null;
   }
 
   const rootParts = ROOT_DOMAIN.split(".").length;
@@ -23,7 +24,13 @@ function extractSubdomain(host: string): string | null {
     return null;
   }
 
-  return parts[0] === "www" ? parts[1] ?? null : parts[0];
+  const subdomain = parts[0] === "www" ? parts[1] ?? null : parts[0];
+
+  if (!subdomain || RESERVED_SUBDOMAINS.has(subdomain)) {
+    return null;
+  }
+
+  return subdomain;
 }
 
 export async function middleware(request: NextRequest) {
