@@ -10,6 +10,7 @@ type ChatShellProps = {
   children: ReactNode;
   footer?: ReactNode;
   quickReplies?: ReactNode;
+  actionBar?: ReactNode;
   scrollRef?: RefObject<HTMLDivElement | null>;
   className?: string;
 };
@@ -19,6 +20,7 @@ export function ChatShell({
   children,
   footer,
   quickReplies,
+  actionBar,
   scrollRef,
   className,
 }: ChatShellProps) {
@@ -93,6 +95,12 @@ export function ChatShell({
       {quickReplies ? (
         <div className="mobile-safe-bottom z-20 shrink-0 border-t border-white/5 bg-background/70 px-3 py-2 backdrop-blur-xl">
           {quickReplies}
+        </div>
+      ) : null}
+
+      {actionBar ? (
+        <div className="mobile-action-bar mobile-safe-bottom z-20 shrink-0 px-3 py-3">
+          {actionBar}
         </div>
       ) : null}
 

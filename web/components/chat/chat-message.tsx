@@ -30,7 +30,7 @@ export function ChatBubble({
   return (
     <div
       className={cn(
-        "flex w-full gap-2 animate-in fade-in slide-in-from-bottom-3 duration-500 fill-mode-backwards",
+        "flex w-full gap-2 animate-in fade-in slide-in-from-bottom-1 duration-200 fill-mode-backwards",
         isBot ? "justify-start" : "justify-end",
         className,
       )}
@@ -83,7 +83,7 @@ type TypingIndicatorProps = {
 
 export function TypingIndicator({ tenantName, tenantLogo }: TypingIndicatorProps) {
   return (
-    <div className="flex animate-in fade-in duration-300 justify-start gap-2">
+    <div className="flex animate-in fade-in duration-150 justify-start gap-2">
       <ChatAvatar variant="bot" tenantName={tenantName} logoUrl={tenantLogo} className="mt-1" />
       <div className="flex items-center gap-1.5 rounded-[1.25rem] rounded-tl-sm border border-white/8 bg-card/95 px-4 py-3.5 backdrop-blur-md">
         <span className="chat-typing-dot" />

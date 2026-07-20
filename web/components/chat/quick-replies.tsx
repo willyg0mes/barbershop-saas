@@ -35,10 +35,10 @@ export function QuickRepliesBar({ replies, className, hint }: QuickRepliesBarPro
             disabled={reply.disabled}
             onClick={reply.onClick}
             className={cn(
-              "mobile-chip shrink-0 animate-in fade-in slide-in-from-bottom-1",
+              "mobile-chip shrink-0 animate-in fade-in slide-in-from-bottom-1 duration-150",
               reply.active && "mobile-chip-active",
             )}
-            style={{ animationDelay: `${index * 40}ms` }}
+            style={{ animationDelay: `${index * 15}ms` }}
           >
             {reply.label}
           </button>

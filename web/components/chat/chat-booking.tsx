@@ -122,7 +122,7 @@ export function ChatBooking({
         pushMessage("bot", text);
         if (nextStep) setStep(nextStep);
         vibrate(6);
-      }, 650);
+      }, 320);
     },
     [pushMessage],
   );
@@ -135,7 +135,7 @@ export function ChatBooking({
         `Fala! 👋 Sou o assistente da ${tenant.name}. Toque nos serviços abaixo ou use os chips para agendar rápido.`,
       );
       vibrate(10);
-    }, 800);
+    }, 450);
     return () => clearTimeout(timer);
   }, [pushMessage, tenant.name]);
 
@@ -289,14 +289,6 @@ export function ChatBooking({
         active: serviceIds.includes(service.id),
         onClick: () => toggleService(service.id),
       }));
-      if (serviceIds.length > 0) {
-        chips.push({
-          id: "continue",
-          label: `Continuar (${totalMinutes} min)`,
-          active: true,
-          onClick: confirmServices,
-        });
-      }
       return chips;
     }
 
@@ -416,11 +408,26 @@ export function ChatBooking({
       </MobileInputBar>
     ) : null;
 
+  const actionBar =
+    step === "services" && !typing ? (
+      <button
+        type="button"
+        disabled={serviceIds.length === 0}
+        onClick={confirmServices}
+        className="mobile-continue-btn"
+      >
+        {serviceIds.length === 0
+          ? "Escolha um serviço"
+          : `Continuar · ${totalMinutes} min · R$ ${(totalPrice / 100).toFixed(2).replace(".", ",")}`}
+      </button>
+    ) : null;
+
   return (
     <ChatShell
       tenant={tenant}
       scrollRef={scrollRef}
       footer={footer}
+      actionBar={actionBar}
       quickReplies={
         quickReplies.length > 0 ? (
           <QuickRepliesBar

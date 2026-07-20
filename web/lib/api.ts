@@ -1,4 +1,5 @@
-const API_BASE =
+const SERVER_API_BASE =
+  process.env.API_URL?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   "http://127.0.0.1:8080";
 
@@ -9,23 +10,30 @@ function apiUrl(path: string): string {
 
   const normalized = path.startsWith("/") ? path : `/${path}`;
 
-  if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_USE_PROXY === "true") {
+  // No browser usa proxy same-origin (evita CORS app.wynext → barber.wynext)
+  if (typeof window !== "undefined") {
     return `/backend${normalized}`;
   }
 
-  return `${API_BASE}${normalized}`;
+  return `${SERVER_API_BASE}${normalized}`;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-    cache: "no-store",
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(apiUrl(path), {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...init?.headers,
+      },
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("Falha de conexão. Verifique sua internet e tente novamente.");
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
