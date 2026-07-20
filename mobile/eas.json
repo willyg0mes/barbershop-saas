@@ -5,18 +5,23 @@
   },
   "build": {
     "preview": {
+      "distribution": "internal",
+      "node": "20.19.4",
       "android": {
         "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://barber.wynext.online",
-        "EXPO_PUBLIC_DEFAULT_TENANT": "dom-corte"
+        "EXPO_PUBLIC_DEFAULT_TENANT": "dom-corte",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       }
     },
     "production": {
+      "node": "20.19.4",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://barber.wynext.online",
-        "EXPO_PUBLIC_DEFAULT_TENANT": "dom-corte"
+        "EXPO_PUBLIC_DEFAULT_TENANT": "dom-corte",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       }
     }
   },
