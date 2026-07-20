@@ -106,7 +106,7 @@ class DatabaseSeeder extends Seeder
             'sort_order' => 3,
         ]);
 
-        $startsAt = now()->timezone($tenant->timezone)->addDay()->setTime(10, 0)->utc();
+        $startsAt = now()->timezone($tenant->timezone)->addDay()->setTime(10, 0);
         $appointment = Appointment::query()->create([
             'tenant_id' => $tenant->id,
             'client_id' => $client->id,
