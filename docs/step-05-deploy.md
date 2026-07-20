@@ -100,7 +100,7 @@ Dispara deploy automático (se secrets configurados).
 ## Checklist pós-deploy
 
 - [x] `GET /api/health` retorna OK — https://barber.wynext.online/api/health
-- [ ] PWA cliente em `https://app.wynext.online/dom-corte` (requer DNS `app.wynext.online`)
+- [x] PWA cliente em `https://app.wynext.online/dom-corte`
 - [x] App barbeiro conecta em `https://barber.wynext.online`
 - [x] SSL ativo (Let's Encrypt via certbot)
 - [ ] Backups PostgreSQL agendados
