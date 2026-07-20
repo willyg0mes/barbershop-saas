@@ -10,6 +10,7 @@ Nunca commitar valores reais. Configure em **Settings → Secrets and variables 
 | `DOCKER_REGISTRY_CREDENTIALS` | Push de imagens Docker | Passo 5 |
 | `VPS_SSH_KEY` | Deploy na VPS | Passo 5 |
 | `VPS_HOST` | Host da VPS | Passo 5 |
+| `VPS_USER` | Usuário SSH na VPS (default: `deploy`) | Passo 5 |
 
 ## Status (Passo 1)
 
@@ -17,13 +18,19 @@ Secrets ainda **não configurados** no repositório. Serão criados nos passos c
 
 ### CI workflow
 
-O arquivo de exemplo está em `docs/examples/api-ci.yml`. Para ativar:
+Os arquivos de exemplo estão em `docs/examples/`:
+
+- `api-ci.yml` — testes PHPUnit
+- `web-ci.yml` — build Next.js
+- `deploy.yml` — deploy SSH na VPS (tag `v*.*.*`)
+
+Para ativar:
 
 ```bash
 gh auth refresh -h github.com -s workflow,repo
 mkdir -p .github/workflows
-cp docs/examples/api-ci.yml .github/workflows/api-ci.yml
-git add .github/workflows/api-ci.yml && git commit -m "ci: enable API GitHub Actions workflow" && git push
+cp docs/examples/api-ci.yml docs/examples/web-ci.yml docs/examples/deploy.yml .github/workflows/
+git add .github/workflows && git commit -m "ci: enable GitHub Actions workflows" && git push
 ```
 
 ## Checklist local

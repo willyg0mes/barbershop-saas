@@ -1,0 +1,104 @@
+# Produção — BarberShop SaaS
+# Domínios:
+#   barber.wynext.online  → API Laravel (app barbeiro / mobile)
+#   app.wynext.online     → PWA cliente (Next.js)
+#   *.wynext.online       → tenants por subdomínio (ex: domcorte.wynext.online)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-barbershop}
+      POSTGRES_USER: ${POSTGRES_USER:-barbershop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-barbershop} -d ${POSTGRES_DB:-barbershop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - barbershop
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - barbershop
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://barber.wynext.online
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-barbershop}
+      DB_USERNAME: ${POSTGRES_USER:-barbershop}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      LOG_CHANNEL: stderr
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - barbershop
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://barber.wynext.online
+        NEXT_PUBLIC_DEFAULT_TENANT: dom-corte
+        NEXT_PUBLIC_ROOT_DOMAIN: wynext.online
+        API_URL: http://nginx:8080
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      - api
+    networks:
+      - barbershop
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./api/public:/var/www/html/public:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      - barbershop
+
+volumes:
+  pgdata:
+
+networks:
+  barbershop:
+    driver: bridge

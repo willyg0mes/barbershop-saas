@@ -11,6 +11,7 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  output: process.env.NODE_ENV === "production" ? "standalone" : undefined,
   async rewrites() {
     const apiUrl = process.env.API_URL || "http://127.0.0.1:8080";
 

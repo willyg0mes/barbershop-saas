@@ -18,8 +18,8 @@ Repositório remoto: https://github.com/willyg0mes/barbershop-saas
 | 1 Setup + DB | `step-01-setup` | `v0.1.0` (após merge) | PR aberto |
 | 2 API | `step-02-api` | `v0.2.0` | Concluído |
 | 3 Frontend | `step-03-frontend` | — | Concluído |
-| 4 App Expo | `step-04-app` | `v0.4.0` | Em andamento |
-| 5 Deploy | `step-05-deploy` | `v1.0.0` | Pendente |
+| 4 App Expo | `step-04-app` | `v0.4.0` | Concluído |
+| 5 Deploy | `step-05-deploy` | `v1.0.0` | Em andamento |
 
 ## Pré-requisitos
 
@@ -144,6 +144,25 @@ npm start
 Login demo: tenant `dom-corte`, `barber@domcorte.test` / `password`
 
 Documentação: [docs/step-04-app.md](docs/step-04-app.md)
+
+Produção (app barbeiro): API em **https://barber.wynext.online**
+
+## Quick start — Passo 5 (Deploy produção)
+
+```bash
+git checkout step-05-deploy
+
+cp .env.production.example .env.production
+# Configure POSTGRES_PASSWORD e APP_KEY
+
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+Domínios:
+- `barber.wynext.online` → API (app barbeiro)
+- `app.wynext.online` → PWA cliente
+
+Documentação: [docs/step-05-deploy.md](docs/step-05-deploy.md)
 
 ## Git — fluxo e testes locais
 
