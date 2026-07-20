@@ -3,6 +3,8 @@ FROM php:8.3-fpm-bookworm AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip curl libpq-dev libzip-dev libpng-dev libicu-dev \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
     && docker-php-ext-install -j$(nproc) pdo_pgsql pgsql zip intl bcmath opcache \
     && rm -rf /var/lib/apt/lists/*
 
