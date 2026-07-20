@@ -12,6 +12,7 @@ type ChatShellProps = {
   quickReplies?: ReactNode;
   actionBar?: ReactNode;
   scrollRef?: RefObject<HTMLDivElement | null>;
+  onBack?: () => void;
   className?: string;
 };
 
@@ -22,6 +23,7 @@ export function ChatShell({
   quickReplies,
   actionBar,
   scrollRef,
+  onBack,
   className,
 }: ChatShellProps) {
   return (
@@ -40,7 +42,7 @@ export function ChatShell({
             type="button"
             aria-label="Voltar"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full active:bg-white/10"
-            onClick={() => window.history.back()}
+            onClick={() => (onBack ? onBack() : window.history.back())}
           >
             <ChevronLeft className="h-6 w-6 text-[var(--tenant-accent)]" />
           </button>

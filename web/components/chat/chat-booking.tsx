@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatAvatar } from "@/components/chat/chat-avatar";
+import { ChatDatePicker } from "@/components/chat/chat-date-picker";
 import { ChatBubble, TypingIndicator } from "@/components/chat/chat-message";
 import { ChatShell } from "@/components/chat/chat-shell";
 import { MobileInputBar, QuickRepliesBar } from "@/components/chat/quick-replies";
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { addDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
+  ArrowLeft,
   CalendarPlus,
   Check,
   Download,
@@ -61,9 +63,7 @@ export function ChatBooking({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<BookingStep>("services");
   const [serviceIds, setServiceIds] = useState<number[]>([]);
-  const [barberId, setBarberId] = useState<number | null>(
-    initialBarbers.length === 1 ? initialBarbers[0].id : null,
-  );
+  const [barberId, setBarberId] = useState<number | null>(null);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [slot, setSlot] = useState<string | null>(null);
   const [clientName, setClientName] = useState("");
@@ -82,7 +82,6 @@ export function ChatBooking({
 
   const services = initialServices;
   const barbers = initialBarbers;
-  const skipBarberStep = barbers.length === 1;
 
   const selectedServices = useMemo(
     () => services.filter((service) => serviceIds.includes(service.id)),
@@ -144,7 +143,7 @@ export function ChatBooking({
   }, [history, step, typing, loadingAvailability, scrollToBottom]);
 
   const loadAvailability = useCallback(async () => {
-    if (!barberId || serviceIds.length === 0 || !date) return;
+    if (serviceIds.length === 0 || !date) return;
 
     setLoadingAvailability(true);
     setError(null);
@@ -153,7 +152,6 @@ export function ChatBooking({
       const payload = await fetchAvailability(tenant.slug, {
         date,
         serviceIds,
-        barberId,
       });
       setAvailability(payload);
     } catch (caught) {
@@ -162,11 +160,36 @@ export function ChatBooking({
     } finally {
       setLoadingAvailability(false);
     }
-  }, [barberId, date, serviceIds, tenant.slug]);
+  }, [date, serviceIds, tenant.slug]);
 
   useEffect(() => {
     if (step === "datetime") void loadAvailability();
-  }, [step, loadAvailability, date, barberId, serviceIds]);
+  }, [step, loadAvailability, date, serviceIds]);
+
+  const goBack = useCallback(() => {
+    vibrate(5);
+
+    if (step === "confirm") {
+      setSlot(null);
+      setStep("datetime");
+      pushMessage("user", "← Alterar horário");
+      botReply("Sem problemas! Escolhe outra data ou horário.");
+      return;
+    }
+
+    if (step === "datetime") {
+      setSlot(null);
+      setBarberId(null);
+      setDate(format(new Date(), "yyyy-MM-dd"));
+      setAvailability(null);
+      setStep("services");
+      pushMessage("user", "← Voltar");
+      botReply("Beleza! Escolhe os serviços de novo.");
+      return;
+    }
+
+    window.history.back();
+  }, [step, pushMessage, botReply]);
 
   const toggleService = useCallback((id: number) => {
     vibrate(5);
@@ -185,47 +208,39 @@ export function ChatBooking({
       `${label} · ${totalMinutes} min · R$ ${(totalPrice / 100).toFixed(2).replace(".", ",")}`,
     );
 
-    if (skipBarberStep) {
-      botReply(
-        `Fechou! ${barbers[0].name} te espera. Escolha o horário nos chips ou no calendário.`,
-        "datetime",
-      );
-    } else {
-      botReply("Boa! Agora escolhe o barbeiro — toque no nome ou no chip.", "barber");
-    }
+    botReply(
+      barbers.length === 1
+        ? `Fechou! Escolhe a data e o horário com ${barbers[0].name.split(" ")[0]}.`
+        : "Boa! Escolhe a data — mostro os horários disponíveis de cada barbeiro.",
+      "datetime",
+    );
   }, [
     serviceIds.length,
     selectedServices,
     totalMinutes,
     totalPrice,
     pushMessage,
-    skipBarberStep,
     botReply,
     barbers,
   ]);
 
-  const confirmBarber = useCallback((id: number) => {
-    const barber = barbers.find((b) => b.id === id);
+  const confirmSlot = useCallback((selectedBarberId: number, value: string) => {
+    vibrate(10);
+    const barber = barbers.find((b) => b.id === selectedBarberId);
     if (!barber) return;
-    vibrate(10);
 
-    setBarberId(id);
-    pushMessage("user", barber.name);
-    botReply(`Show! Horários do ${barber.name.split(" ")[0]} — escolhe o melhor pra você.`, "datetime");
-  }, [barbers, pushMessage, botReply]);
-
-  const confirmSlot = useCallback((value: string) => {
-    vibrate(10);
+    setBarberId(selectedBarberId);
     setSlot(value);
-    pushMessage("user", formatSlotLabel(value));
+    pushMessage("user", `${barber.name.split(" ")[0]} · ${formatSlotLabel(value)}`);
     botReply("Quase lá! Digita seu nome na barra de baixo e manda ✈️", "confirm");
-  }, [pushMessage, botReply]);
+  }, [barbers, pushMessage, botReply]);
 
   const setQuickDate = useCallback((offset: number) => {
     vibrate(5);
     const next = format(addDays(new Date(), offset), "yyyy-MM-dd");
     setDate(next);
     setSlot(null);
+    setBarberId(null);
   }, []);
 
   const submitBooking = async () => {
@@ -262,7 +277,7 @@ export function ChatBooking({
     vibrate(8);
     setStep("services");
     setServiceIds([]);
-    setBarberId(skipBarberStep ? barbers[0].id : null);
+    setBarberId(null);
     setDate(format(new Date(), "yyyy-MM-dd"));
     setSlot(null);
     setClientName("");
@@ -272,48 +287,40 @@ export function ChatBooking({
     setError(null);
     setHistory([]);
     botReply("Bora de novo! Escolhe os serviços 👇");
-  }, [skipBarberStep, barbers, botReply]);
+  }, [botReply]);
 
-  const slots = useMemo(
-    () => availability?.barbers[0]?.slots ?? [],
+  const availabilityBarbers = useMemo(
+    () => availability?.barbers ?? [],
     [availability],
   );
 
+  const totalSlots = useMemo(
+    () => availabilityBarbers.reduce((sum, barber) => sum + barber.slots.length, 0),
+    [availabilityBarbers],
+  );
+
   const quickReplies = useMemo(() => {
-    if (typing || step === "confirm") return [];
+    if (typing) return [];
 
     if (step === "services") {
-      const chips = services.map((service) => ({
+      return services.map((service) => ({
         id: `svc-${service.id}`,
         label: serviceIds.includes(service.id) ? `✓ ${service.name}` : service.name,
         active: serviceIds.includes(service.id),
         onClick: () => toggleService(service.id),
       }));
-      return chips;
-    }
-
-    if (step === "barber") {
-      return barbers.map((barber) => ({
-        id: `barber-${barber.id}`,
-        label: barber.name.split(" ")[0],
-        active: barberId === barber.id,
-        onClick: () => confirmBarber(barber.id),
-      }));
     }
 
     if (step === "datetime") {
-      const dateChips = [
+      return [
         { id: "today", label: "Hoje", active: date === format(new Date(), "yyyy-MM-dd"), onClick: () => setQuickDate(0) },
         { id: "tomorrow", label: "Amanhã", active: date === format(addDays(new Date(), 1), "yyyy-MM-dd"), onClick: () => setQuickDate(1) },
+        { id: "back", label: "← Voltar", onClick: goBack },
       ];
-      const slotChips = slots.slice(0, 8).map((item) => ({
-        id: `slot-${item}`,
-        label: format(parseISO(item), "HH:mm", { locale: ptBR }),
-        active: slot === item,
-        disabled: loadingAvailability,
-        onClick: () => confirmSlot(item),
-      }));
-      return [...dateChips, ...slotChips];
+    }
+
+    if (step === "confirm") {
+      return [{ id: "back", label: "← Alterar horário", onClick: goBack }];
     }
 
     if (step === "success" && appointment) {
@@ -345,22 +352,14 @@ export function ChatBooking({
     step,
     services,
     serviceIds,
-    totalMinutes,
-    barbers,
-    barberId,
     date,
-    slots,
-    slot,
-    loadingAvailability,
     appointment,
     selectedServices,
     tenant,
-    confirmServices,
-    confirmBarber,
-    confirmSlot,
     restart,
     toggleService,
     setQuickDate,
+    goBack,
   ]);
 
   const footer =
@@ -426,6 +425,7 @@ export function ChatBooking({
     <ChatShell
       tenant={tenant}
       scrollRef={scrollRef}
+      onBack={goBack}
       footer={footer}
       actionBar={actionBar}
       quickReplies={
@@ -435,8 +435,10 @@ export function ChatBooking({
               step === "services"
                 ? "Toque rápido"
                 : step === "datetime"
-                  ? "Horários"
-                  : undefined
+                  ? "Datas rápidas"
+                  : step === "confirm"
+                    ? "Ajustar"
+                    : undefined
             }
             replies={quickReplies}
           />
@@ -510,54 +512,101 @@ export function ChatBooking({
         </ChatBubble>
       ) : null}
 
-      {!typing && step === "barber" ? (
-        <ChatBubble role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
-          <div className="flex flex-col gap-2">
-            {barbers.map((barber) => (
-              <button
-                key={barber.id}
-                type="button"
-                onClick={() => confirmBarber(barber.id)}
-                className="mobile-touch-card flex items-center gap-3 rounded-2xl border border-white/10 bg-background/50 px-3 py-3 active:scale-[0.98]"
-              >
-                <ChatAvatar variant="barber" name={barber.name} />
-                <div className="text-left">
-                  <p className="font-medium">{barber.name}</p>
-                  <p className="text-xs capitalize text-muted-foreground">{barber.role}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </ChatBubble>
-      ) : null}
-
       {!typing && step === "datetime" ? (
         <ChatBubble role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
-          <div className="space-y-3">
-            <Input
-              type="date"
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold">Escolha a data</p>
+              <button type="button" onClick={goBack} className="chat-back-link">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Serviços
+              </button>
+            </div>
+
+            <ChatDatePicker
               value={date}
               min={format(new Date(), "yyyy-MM-dd")}
-              onChange={(e) => {
-                setDate(e.target.value);
+              onChange={(next) => {
+                setDate(next);
                 setSlot(null);
+                setBarberId(null);
               }}
-              className="mobile-touch-input rounded-xl"
             />
+
             {loadingAvailability ? (
               <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Buscando horários...
               </div>
-            ) : slots.length === 0 ? (
+            ) : availabilityBarbers.length === 0 ? (
               <p className="text-center text-xs text-muted-foreground">
-                Sem horários nesta data. Tente Hoje/Amanhã nos chips.
+                Sem horários nesta data. Tente outro dia no calendário.
+              </p>
+            ) : totalSlots === 0 ? (
+              <p className="text-center text-xs text-muted-foreground">
+                Nenhum horário livre nesta data. Tente Hoje ou Amanhã.
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                {slots.length} horários · deslize os chips abaixo
-              </p>
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  {totalSlots} horário{totalSlots === 1 ? "" : "s"} disponíve{totalSlots === 1 ? "l" : "is"}
+                </p>
+
+                {availabilityBarbers.map((barber) => (
+                  <div key={barber.id} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ChatAvatar variant="barber" name={barber.name} className="h-8 w-8 text-xs" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">{barber.name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {barber.slots.length === 0
+                            ? "Sem horários neste dia"
+                            : `${barber.slots.length} horário${barber.slots.length === 1 ? "" : "s"}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {barber.slots.length > 0 ? (
+                      <div className="grid grid-cols-4 gap-2">
+                        {barber.slots.map((item) => {
+                          const active = slot === item && barberId === barber.id;
+
+                          return (
+                            <button
+                              key={item}
+                              type="button"
+                              disabled={loadingAvailability}
+                              onClick={() => confirmSlot(barber.id, item)}
+                              className={cn(
+                                "chat-slot-btn",
+                                active && "chat-slot-btn-active",
+                              )}
+                            >
+                              {format(parseISO(item), "HH:mm", { locale: ptBR })}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             )}
+          </div>
+        </ChatBubble>
+      ) : null}
+
+      {!typing && step === "confirm" && slot && selectedBarber ? (
+        <ChatBubble role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
+          <div className="space-y-2">
+            <div className="rounded-xl border border-white/10 bg-background/40 px-3 py-2">
+              <p className="text-sm font-semibold">{selectedBarber.name}</p>
+              <p className="text-xs text-muted-foreground">{formatSlotLabel(slot)}</p>
+            </div>
+            <button type="button" onClick={goBack} className="chat-back-link">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Alterar horário
+            </button>
           </div>
         </ChatBubble>
       ) : null}
