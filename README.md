@@ -16,8 +16,8 @@ Repositório remoto: https://github.com/willyg0mes/barbershop-saas
 | Passo | Branch | Tag | Estado |
 |-------|--------|-----|--------|
 | 1 Setup + DB | `step-01-setup` | `v0.1.0` (após merge) | PR aberto |
-| 2 API | `step-02-api` | `v0.2.0` (após merge) | Em andamento |
-| 3 Frontend | `step-03-frontend` | — | Pendente |
+| 2 API | `step-02-api` | `v0.2.0` | Concluído |
+| 3 Frontend | `step-03-frontend` | — | Em andamento |
 | 4 App Expo | `step-04-app` | — | Pendente |
 | 5 Deploy | `step-05-deploy` | `v1.0.0` | Pendente |
 
@@ -105,6 +105,26 @@ curl -s -X POST http://127.0.0.1:8080/api/v1/tenants/dom-corte/appointments \
 ```
 
 Documentação completa: [docs/step-02-api.md](docs/step-02-api.md)
+
+## Quick start — Passo 3 (PWA Next.js)
+
+```bash
+git checkout step-03-frontend
+
+# Terminal 1 — API
+cd api && php artisan serve --port=8080
+
+# Terminal 2 — Web
+cd web
+cp .env.example .env.local
+npm install
+npm run test
+npm run dev
+```
+
+Abrir http://localhost:3000/dom-corte
+
+Documentação: [docs/step-03-frontend.md](docs/step-03-frontend.md)
 
 ## Git — fluxo e testes locais
 

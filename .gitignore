@@ -14,6 +14,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!**/.env.example
 !.env.*.example
 *.pem
 *.key
@@ -69,6 +70,13 @@ mobile/android/app/build/
 mobile/ios/Pods/
 *.jks
 *.keystore
+
+# Next.js PWA build artifacts
+web/public/sw.js
+web/public/workbox-*.js
+web/public/fallback-*.js
+web/.next/
+web/.env.local
 
 # Docker / local volumes
 docker-data/
