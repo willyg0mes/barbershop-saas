@@ -99,9 +99,20 @@ Dispara deploy automático (se secrets configurados).
 
 ## Checklist pós-deploy
 
-- [ ] `GET /api/health` retorna OK
-- [ ] PWA cliente em `https://app.wynext.online/dom-corte`
-- [ ] App barbeiro conecta em `https://barber.wynext.online`
-- [ ] SSL ativo (NPM ou certbot)
+- [x] `GET /api/health` retorna OK — https://barber.wynext.online/api/health
+- [ ] PWA cliente em `https://app.wynext.online/dom-corte` (requer DNS `app.wynext.online`)
+- [x] App barbeiro conecta em `https://barber.wynext.online`
+- [x] SSL ativo (Let's Encrypt via certbot)
 - [ ] Backups PostgreSQL agendados
-- [ ] `APP_DEBUG=false` em produção
+- [x] `APP_DEBUG=false` em produção
+
+### VPS wynext (212.85.19.249)
+
+```bash
+# Stack Docker na porta interna 8092
+cd /var/www/html/barbershop-saas
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+# Nginx sistema: /etc/nginx/sites-available/barbershop
+# Proxy → 127.0.0.1:8092
+```
