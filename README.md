@@ -15,8 +15,8 @@ Repositório remoto: https://github.com/willyg0mes/barbershop-saas
 
 | Passo | Branch | Tag | Estado |
 |-------|--------|-----|--------|
-| 1 Setup + DB | `step-01-setup` | `v0.1.0` (após merge) | Em andamento |
-| 2 API | `step-02-api` | `v0.2.0` | Pendente |
+| 1 Setup + DB | `step-01-setup` | `v0.1.0` (após merge) | PR aberto |
+| 2 API | `step-02-api` | `v0.2.0` (após merge) | Em andamento |
 | 3 Frontend | `step-03-frontend` | — | Pendente |
 | 4 App Expo | `step-04-app` | — | Pendente |
 | 5 Deploy | `step-05-deploy` | `v1.0.0` | Pendente |
@@ -70,6 +70,41 @@ Credenciais demo (após seed):
 | Client | `cliente@domcorte.test` | `password` |
 
 Tenant demo: slug `dom-corte`, subdomain `domcorte`.
+
+## Quick start — Passo 2 (API REST + disponibilidade)
+
+```bash
+git checkout step-02-api
+cd api
+composer install
+cp .env.example .env && php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed
+php artisan test
+php artisan serve --port=8080
+```
+
+### Endpoints principais
+
+```bash
+# Branding do tenant
+curl -s http://127.0.0.1:8080/api/v1/tenants/dom-corte/branding | jq
+
+# Disponibilidade (combo 60 min via service_ids)
+curl -s "http://127.0.0.1:8080/api/v1/tenants/dom-corte/availability?date=2026-07-21&service_ids[]=1&service_ids[]=2&barber_id=2" | jq
+
+# Login barbeiro
+curl -s -X POST http://127.0.0.1:8080/api/v1/tenants/dom-corte/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"barber@domcorte.test","password":"password"}' | jq
+
+# Criar agendamento
+curl -s -X POST http://127.0.0.1:8080/api/v1/tenants/dom-corte/appointments \
+  -H 'Content-Type: application/json' \
+  -d '{"barber_id":2,"service_ids":[1,2],"starts_at":"2026-07-21T11:00:00-03:00","client_name":"Maria"}' | jq
+```
+
+Documentação completa: [docs/step-02-api.md](docs/step-02-api.md)
 
 ## Git — fluxo e testes locais
 
