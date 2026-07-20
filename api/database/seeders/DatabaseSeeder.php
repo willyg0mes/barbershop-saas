@@ -135,6 +135,30 @@ class DatabaseSeeder extends Seeder
             ],
         ]);
 
+        $todayStart = now()->timezone($tenant->timezone)->setTime(15, 0);
+        $todayAppointment = Appointment::query()->create([
+            'tenant_id' => $tenant->id,
+            'client_id' => $client->id,
+            'barber_id' => $barber->id,
+            'client_name' => 'Ana Demo',
+            'client_phone' => '+5511988887777',
+            'client_email' => null,
+            'starts_at' => $todayStart,
+            'ends_at' => $todayStart->copy()->addMinutes(30),
+            'total_duration_minutes' => 30,
+            'total_price_cents' => 4500,
+            'status' => AppointmentStatus::Confirmed,
+            'notes' => 'Agendamento de hoje para testar o app barbeiro',
+        ]);
+
+        $todayAppointment->services()->attach([
+            $corte->id => [
+                'duration_minutes' => 30,
+                'price_cents' => 4500,
+                'sort_order' => 1,
+            ],
+        ]);
+
         // Evita unused variable warnings em análise estática
         unset($owner, $combo);
     }

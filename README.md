@@ -17,8 +17,8 @@ Repositório remoto: https://github.com/willyg0mes/barbershop-saas
 |-------|--------|-----|--------|
 | 1 Setup + DB | `step-01-setup` | `v0.1.0` (após merge) | PR aberto |
 | 2 API | `step-02-api` | `v0.2.0` | Concluído |
-| 3 Frontend | `step-03-frontend` | — | Em andamento |
-| 4 App Expo | `step-04-app` | — | Pendente |
+| 3 Frontend | `step-03-frontend` | — | Concluído |
+| 4 App Expo | `step-04-app` | `v0.4.0` | Em andamento |
 | 5 Deploy | `step-05-deploy` | `v1.0.0` | Pendente |
 
 ## Pré-requisitos
@@ -125,6 +125,25 @@ npm run dev
 Abrir http://localhost:3000/dom-corte
 
 Documentação: [docs/step-03-frontend.md](docs/step-03-frontend.md)
+
+## Quick start — Passo 4 (App Expo barbeiro)
+
+```bash
+git checkout step-04-app
+
+# Terminal 1 — API
+cd api && php artisan serve --port=8080
+
+# Terminal 2 — Mobile
+cd mobile
+cp .env.example .env
+npm install
+npm start
+```
+
+Login demo: tenant `dom-corte`, `barber@domcorte.test` / `password`
+
+Documentação: [docs/step-04-app.md](docs/step-04-app.md)
 
 ## Git — fluxo e testes locais
 
