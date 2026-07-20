@@ -1,5 +1,5 @@
 import { fetchTenantBranding } from "@/lib/api";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
 
@@ -17,10 +17,24 @@ export async function generateMetadata({
     const branding = await fetchTenantBranding(tenant);
     return {
       title: branding.name,
-      themeColor: branding.primary_color,
     };
   } catch {
     return { title: "Barbearia" };
+  }
+}
+
+export async function generateViewport({
+  params,
+}: TenantLayoutProps): Promise<Viewport> {
+  const { tenant } = await params;
+
+  try {
+    const branding = await fetchTenantBranding(tenant);
+    return {
+      themeColor: branding.primary_color,
+    };
+  } catch {
+    return { themeColor: "#121212" };
   }
 }
 

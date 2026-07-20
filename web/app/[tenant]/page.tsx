@@ -19,7 +19,6 @@ export async function generateMetadata({
     return {
       title: `${branding.name} — Agendar`,
       description: `Agende na ${branding.name} pelo celular`,
-      themeColor: branding.primary_color,
       appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
