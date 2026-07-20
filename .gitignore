@@ -1,0 +1,87 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDEs
+.idea/
+.vscode/
+*.code-workspace
+.cursor/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# Dependencies
+node_modules/
+vendor/
+.pnp
+.pnp.js
+
+# Build / cache
+dist/
+build/
+.next/
+out/
+.expo/
+.expo-shared/
+web-build/
+*.tsbuildinfo
+.phpunit.result.cache
+.phpunit.cache/
+coverage/
+.nyc_output/
+
+# Laravel
+api/storage/*.key
+api/storage/pail/
+api/storage/framework/cache/data/*
+api/storage/framework/sessions/*
+api/storage/framework/testing/*
+api/storage/framework/views/*
+api/storage/logs/*
+api/bootstrap/cache/*.php
+!api/storage/framework/cache/data/.gitignore
+!api/storage/framework/sessions/.gitignore
+!api/storage/framework/testing/.gitignore
+!api/storage/framework/views/.gitignore
+!api/storage/logs/.gitignore
+!api/bootstrap/cache/.gitignore
+api/database/*.sqlite
+api/database/*.sqlite-journal
+api/public/hot
+api/public/storage
+
+# Mobile
+mobile/*.apk
+mobile/*.aab
+mobile/android/app/build/
+mobile/ios/Pods/
+*.jks
+*.keystore
+
+# Docker / local volumes
+docker-data/
+pgdata/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.turbo/
+.vercel/
+tmp/
+temp/
