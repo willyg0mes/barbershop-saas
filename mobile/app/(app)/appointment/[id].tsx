@@ -122,12 +122,38 @@ export default function AppointmentDetailScreen() {
         </Text>
 
         {appointment.client_phone ? (
-          <Pressable
-            onPress={() => void Linking.openURL(`tel:${appointment.client_phone}`)}
-            style={styles.linkButton}
-          >
-            <Text style={styles.linkText}>Ligar · {appointment.client_phone}</Text>
-          </Pressable>
+          <View style={styles.contactBlock}>
+            <Text style={styles.phoneLabel}>{appointment.client_phone}</Text>
+            <View style={styles.contactRow}>
+              <Pressable
+                onPress={() => void Linking.openURL(`tel:${appointment.client_phone}`)}
+                style={({ pressed }) => [styles.linkButton, pressed && styles.actionPressed]}
+              >
+                <Text style={styles.linkText}>Ligar</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const digits = appointment.client_phone!.replace(/\D/g, "");
+                  const phone =
+                    digits.length >= 10 && !digits.startsWith("55")
+                      ? `55${digits}`
+                      : digits;
+                  const firstName = appointment.client_name?.split(" ")[0] ?? "";
+                  const message = encodeURIComponent(
+                    `Olá${firstName ? ` ${firstName}` : ""}! Aqui é da barbearia sobre seu horário de ${startsAt}.`,
+                  );
+                  void Linking.openURL(`https://wa.me/${phone}?text=${message}`);
+                }}
+                style={({ pressed }) => [
+                  styles.linkButton,
+                  styles.whatsappButton,
+                  pressed && styles.actionPressed,
+                ]}
+              >
+                <Text style={styles.whatsappText}>WhatsApp</Text>
+              </Pressable>
+            </View>
+          </View>
         ) : null}
 
         {appointment.notes ? (
@@ -213,18 +239,41 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 16,
   },
+  contactBlock: {
+    marginBottom: 16,
+  },
+  phoneLabel: {
+    color: "#9ca3af",
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  contactRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
   linkButton: {
     alignSelf: "flex-start",
     backgroundColor: "#161616",
+    borderColor: "#2a2a2a",
     borderRadius: 999,
-    marginBottom: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   linkText: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
+  },
+  whatsappButton: {
+    backgroundColor: "#0f2a1a",
+    borderColor: "#166534",
+  },
+  whatsappText: {
+    color: "#4ade80",
+    fontSize: 14,
+    fontWeight: "700",
   },
   notes: {
     backgroundColor: "#161616",
