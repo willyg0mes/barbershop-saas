@@ -64,4 +64,9 @@ class Tenant extends Model
             'accent_color' => $this->accent_color,
         ];
     }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
 }
