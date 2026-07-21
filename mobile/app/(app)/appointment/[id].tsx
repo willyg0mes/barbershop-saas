@@ -39,7 +39,7 @@ const NEXT_ACTIONS: Partial<Record<AppointmentStatus, { label: string; status: A
 export default function AppointmentDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { token, tenantSlug } = useAuth();
+  const { token, user } = useAuth();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -85,7 +85,7 @@ export default function AppointmentDetailScreen() {
           locale: ptBR,
         });
         const firstName = updated.client_name?.split(" ")[0] ?? "";
-        const shop = tenantSlug.replace(/-/g, " ");
+        const shop = user?.tenant_name ?? "barbearia";
 
         if (updated.client_phone) {
           await openWhatsApp(

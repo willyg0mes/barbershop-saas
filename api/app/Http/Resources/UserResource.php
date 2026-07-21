@@ -13,6 +13,8 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $this->loadMissing('tenant');
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -20,6 +22,8 @@ class UserResource extends JsonResource
             'role' => $this->role->value,
             'phone' => $this->phone,
             'tenant_id' => $this->tenant_id,
+            'tenant_name' => $this->tenant?->name,
+            'tenant_slug' => $this->tenant?->slug,
         ];
     }
 }

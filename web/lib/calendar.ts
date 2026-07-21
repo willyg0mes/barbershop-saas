@@ -75,3 +75,32 @@ export function downloadIcs(filename: string, content: string): void {
   anchor.click();
   URL.revokeObjectURL(url);
 }
+
+/** Abre/baixa o .ics no formato que a Agenda da Apple entende. */
+export function openAppleCalendar(options: {
+  appointment: Appointment;
+  services: Service[];
+  tenant: TenantBranding;
+}): void {
+  const content = buildIcsFile(options);
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const isApple =
+    typeof navigator !== "undefined" &&
+    (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ||
+      /Macintosh/.test(navigator.userAgent));
+
+  if (isApple) {
+    // No iOS/macOS, navegar para o arquivo costuma abrir a Agenda
+    window.location.href = url;
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return;
+  }
+
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `agendamento-${options.tenant.slug}.ics`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}

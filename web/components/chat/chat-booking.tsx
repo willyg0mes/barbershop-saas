@@ -12,8 +12,7 @@ import {
 } from "@/lib/api";
 import {
   buildGoogleCalendarUrl,
-  buildIcsFile,
-  downloadIcs,
+  openAppleCalendar,
 } from "@/lib/calendar";
 import type {
   AvailabilityResponse,
@@ -29,7 +28,6 @@ import {
   ArrowLeft,
   CalendarPlus,
   Check,
-  Download,
   Loader2,
   Send,
 } from "lucide-react";
@@ -131,7 +129,7 @@ export function ChatBooking({
       setTyping(false);
       pushMessage(
         "bot",
-        `Fala! 👋 Sou o assistente da ${tenant.name}. Toque nos serviços abaixo ou use os chips para agendar rápido.`,
+        `Fala! 👋 Aqui é o ${tenant.name}. Toque nos serviços abaixo ou use os chips para agendar rápido.`,
       );
       vibrate(10);
     }, 450);
@@ -326,13 +324,14 @@ export function ChatBooking({
     if (step === "success" && appointment) {
       return [
         {
-          id: "ics",
-          label: "📅 .ics",
+          id: "apple",
+          label: "Agenda Apple",
           onClick: () =>
-            downloadIcs(
-              `agendamento-${tenant.slug}.ics`,
-              buildIcsFile({ appointment, services: selectedServices, tenant }),
-            ),
+            openAppleCalendar({
+              appointment,
+              services: selectedServices,
+              tenant,
+            }),
         },
         {
           id: "gcal",
@@ -624,15 +623,16 @@ export function ChatBooking({
               <button
                 type="button"
                 onClick={() =>
-                  downloadIcs(
-                    `agendamento-${tenant.slug}.ics`,
-                    buildIcsFile({ appointment, services: selectedServices, tenant }),
-                  )
+                  openAppleCalendar({
+                    appointment,
+                    services: selectedServices,
+                    tenant,
+                  })
                 }
                 className="mobile-touch-card flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-background/40 py-3 text-xs active:scale-95"
               >
-                <Download className="h-5 w-5" />
-                .ics
+                <CalendarPlus className="h-5 w-5" />
+                Agenda Apple
               </button>
               <a
                 href={buildGoogleCalendarUrl({ appointment, services: selectedServices, tenant })}

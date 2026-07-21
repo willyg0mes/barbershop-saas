@@ -7,6 +7,8 @@ export type User = {
   role: UserRole;
   phone: string | null;
   tenant_id: number;
+  tenant_name?: string | null;
+  tenant_slug?: string | null;
 };
 
 export type AppointmentStatus =
