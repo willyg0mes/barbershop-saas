@@ -32,9 +32,9 @@ export function ChatShell({
     >
       {/* Header estilo app de mensagens */}
       <header
-        className="mobile-safe-top sticky top-0 z-30 shrink-0 border-b border-white/6 px-3 pb-3 pt-2 backdrop-blur-2xl"
+        className="mobile-safe-top sticky top-0 z-30 shrink-0 border-b border-white/6 px-3 pb-3 pt-2"
         style={{
-          backgroundColor: "color-mix(in srgb, var(--tenant-primary) 92%, transparent)",
+          backgroundColor: "var(--tenant-primary)",
         }}
       >
         <div className="flex items-center gap-3">
@@ -74,10 +74,7 @@ export function ChatShell({
                 {tenant.name}
               </h1>
               <p className="flex items-center gap-1.5 text-xs text-emerald-400/90">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                </span>
+                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                 online agora
               </p>
             </div>

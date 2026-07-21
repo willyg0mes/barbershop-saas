@@ -28,17 +28,16 @@ export function QuickRepliesBar({ replies, className, hint }: QuickRepliesBarPro
         </p>
       ) : null}
       <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {replies.map((reply, index) => (
+        {replies.map((reply) => (
           <button
             key={reply.id}
             type="button"
             disabled={reply.disabled}
             onClick={reply.onClick}
             className={cn(
-              "mobile-chip shrink-0 animate-in fade-in slide-in-from-bottom-1 duration-150",
+              "mobile-chip shrink-0",
               reply.active && "mobile-chip-active",
             )}
-            style={{ animationDelay: `${index * 15}ms` }}
           >
             {reply.label}
           </button>

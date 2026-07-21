@@ -72,7 +72,7 @@ export function ChatBooking({
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [typing, setTyping] = useState(true);
+  const [typing, setTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appointment, setAppointment] = useState<import("@/lib/types").Appointment | null>(null);
 
@@ -99,10 +99,9 @@ export function ChatBooking({
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: "smooth",
-      });
+      const el = scrollRef.current;
+      if (!el) return;
+      el.scrollTop = el.scrollHeight;
     });
   }, []);
 
@@ -113,29 +112,22 @@ export function ChatBooking({
     ]);
   }, []);
 
+  /** Resposta do bot sem delay — etapas mudam na hora. */
   const botReply = useCallback(
     (text: string, nextStep?: BookingStep) => {
-      setTyping(true);
-      setTimeout(() => {
-        setTyping(false);
-        pushMessage("bot", text);
-        if (nextStep) setStep(nextStep);
-        vibrate(6);
-      }, 320);
+      setTyping(false);
+      pushMessage("bot", text);
+      if (nextStep) setStep(nextStep);
     },
     [pushMessage],
   );
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTyping(false);
-      pushMessage(
-        "bot",
-        `Fala! 👋 Aqui é o ${tenant.name}. Toque nos serviços abaixo ou use os chips para agendar rápido.`,
-      );
-      vibrate(10);
-    }, 450);
-    return () => clearTimeout(timer);
+    setTyping(false);
+    pushMessage(
+      "bot",
+      `Fala! 👋 Aqui é o ${tenant.name}. Toque nos serviços abaixo ou use os chips para agendar rápido.`,
+    );
   }, [pushMessage, tenant.name]);
 
   useEffect(() => {
@@ -171,7 +163,7 @@ export function ChatBooking({
           }
         }
       })();
-    }, 180);
+    }, 50);
 
     return () => {
       cancelled = true;
@@ -486,7 +478,7 @@ export function ChatBooking({
             disabled={!clientName.trim() || submitting}
             onClick={submitBooking}
             className={cn(
-              "mobile-send-btn flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-90",
+              "mobile-send-btn flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
               !clientName.trim() && "opacity-40",
             )}
             style={{
@@ -545,7 +537,7 @@ export function ChatBooking({
         ) : null
       }
     >
-      {history.map((message, index) => (
+      {history.map((message) => (
         <ChatBubble
           key={message.id}
           role={message.role}
@@ -553,7 +545,6 @@ export function ChatBooking({
           tenantName={tenant.name}
           tenantLogo={tenant.logo_url}
           userName={message.role === "user" ? displayUserName : undefined}
-          delayMs={index * 30}
         >
           {message.text}
         </ChatBubble>
@@ -587,7 +578,7 @@ export function ChatBooking({
                     type="button"
                     onClick={() => toggleService(service.id)}
                     className={cn(
-                      "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left active:scale-[0.98]",
+                      "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left",
                       active
                         ? "border-[var(--tenant-secondary)] bg-[var(--tenant-secondary)]/12"
                         : "border-white/10 bg-background/50",
@@ -595,7 +586,7 @@ export function ChatBooking({
                   >
                     <div
                       className={cn(
-                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2",
                         active
                           ? "border-[var(--tenant-secondary)] bg-[var(--tenant-secondary)]"
                           : "border-white/20",
@@ -636,7 +627,7 @@ export function ChatBooking({
                     type="button"
                     onClick={() => confirmBarber(barber.id)}
                     className={cn(
-                      "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left active:scale-[0.98]",
+                      "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left",
                       active
                         ? "border-[var(--tenant-secondary)] bg-[var(--tenant-secondary)]/12"
                         : "border-white/10 bg-background/50",
@@ -665,7 +656,7 @@ export function ChatBooking({
                 type="button"
                 onClick={() => confirmBarber(null)}
                 className={cn(
-                  "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left active:scale-[0.98]",
+                  "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left",
                   barberAny
                     ? "border-[var(--tenant-secondary)] bg-[var(--tenant-secondary)]/12"
                     : "border-white/10 bg-background/50",
