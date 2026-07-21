@@ -140,32 +140,44 @@ export function ChatBooking({
 
   useEffect(() => {
     scrollToBottom();
-  }, [history, step, typing, loadingAvailability, scrollToBottom]);
-
-  const loadAvailability = useCallback(async () => {
-    if (serviceIds.length === 0 || !date) return;
-
-    setLoadingAvailability(true);
-    setError(null);
-
-    try {
-      const payload = await fetchAvailability(tenant.slug, {
-        date,
-        serviceIds,
-        barberId: barberAny ? undefined : (barberId ?? undefined),
-      });
-      setAvailability(payload);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Erro ao buscar horários");
-      setAvailability(null);
-    } finally {
-      setLoadingAvailability(false);
-    }
-  }, [date, serviceIds, tenant.slug, barberId, barberAny]);
+  }, [history, step, typing, scrollToBottom]);
 
   useEffect(() => {
-    if (step === "datetime") void loadAvailability();
-  }, [step, loadAvailability, date, serviceIds, barberId, barberAny]);
+    if (step !== "datetime") return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        if (serviceIds.length === 0 || !date) return;
+        setLoadingAvailability(true);
+        setError(null);
+        try {
+          const payload = await fetchAvailability(tenant.slug, {
+            date,
+            serviceIds,
+            barberId: barberAny ? undefined : (barberId ?? undefined),
+          });
+          if (!cancelled) {
+            setAvailability(payload);
+          }
+        } catch (caught) {
+          if (!cancelled) {
+            setError(caught instanceof Error ? caught.message : "Erro ao buscar horários");
+            setAvailability(null);
+          }
+        } finally {
+          if (!cancelled) {
+            setLoadingAvailability(false);
+          }
+        }
+      })();
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [step, date, serviceIds, tenant.slug, barberId, barberAny]);
 
   const goBack = useCallback(() => {
     vibrate(5);
@@ -477,7 +489,10 @@ export function ChatBooking({
               "mobile-send-btn flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-90",
               !clientName.trim() && "opacity-40",
             )}
-            style={{ backgroundColor: "var(--tenant-secondary)", color: "#111" }}
+            style={{
+              backgroundColor: "var(--tenant-secondary)",
+              color: "var(--tenant-on-secondary, #0a0a0a)",
+            }}
             aria-label="Enviar"
           >
             {submitting ? (
