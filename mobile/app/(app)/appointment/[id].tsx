@@ -1,3 +1,6 @@
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,11 +9,11 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -20,6 +23,11 @@ import { useAuth } from "@/lib/auth";
 import { showLocalNotification } from "@/lib/notifications";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { openWhatsApp } from "@/lib/whatsapp";
+
+function toApiDateTime(date: Date): string {
+  // API espera ISO com offset, ex: 2026-07-21T14:00:00-03:00
+  return format(date, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
 
 const NEXT_ACTIONS: Partial<Record<AppointmentStatus, { label: string; status: AppointmentStatus }[]>> = {
   pending: [
@@ -46,8 +54,8 @@ export default function AppointmentDetailScreen() {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rescheduling, setRescheduling] = useState(false);
-  const [newDate, setNewDate] = useState("");
-  const [newTime, setNewTime] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -150,23 +158,52 @@ export default function AppointmentDetailScreen() {
     );
   }
 
-  async function handleReschedule() {
-    if (!token || !appointment) return;
-    if (!newDate.trim() || !newTime.trim()) {
-      Alert.alert("Campos obrigatórios", "Informe data e horário.");
+  function openReschedule() {
+    if (!appointment) return;
+    setSelectedDate(parseISO(appointment.starts_at));
+    setPickerMode(null);
+    setRescheduling(true);
+  }
+
+  function onPickerChange(event: DateTimePickerEvent, date?: Date) {
+    const mode = pickerMode;
+
+    if (Platform.OS === "android") {
+      setPickerMode(null);
+    }
+
+    if (event.type === "dismissed" || !date || !mode) {
       return;
     }
+
+    setSelectedDate((current) => {
+      if (mode === "date") {
+        const next = new Date(current);
+        next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+        return next;
+      }
+
+      const next = new Date(current);
+      next.setHours(date.getHours(), date.getMinutes(), 0, 0);
+      return next;
+    });
+  }
+
+  async function handleReschedule() {
+    if (!token || !appointment) return;
 
     setUpdating(true);
     setError(null);
 
     try {
-      const newStartsAt = `${newDate.trim()}T${newTime.trim()}:00`;
-      const updated = await rescheduleAppointment(token, appointment.id, newStartsAt);
+      const updated = await rescheduleAppointment(
+        token,
+        appointment.id,
+        toApiDateTime(selectedDate),
+      );
       setAppointment(updated);
       setRescheduling(false);
-      setNewDate("");
-      setNewTime("");
+      setPickerMode(null);
       await showLocalNotification("Reagendado", `${updated.client_name} · novo horário`);
       Alert.alert("Pronto", "Horário reagendado com sucesso.");
     } catch (caught) {
@@ -237,7 +274,7 @@ export default function AppointmentDetailScreen() {
 
         {canReschedule && !rescheduling ? (
           <Pressable
-            onPress={() => setRescheduling(true)}
+            onPress={openReschedule}
             style={({ pressed }) => [styles.rescheduleButton, pressed && styles.actionPressed]}
           >
             <Text style={styles.rescheduleText}>Reagendar</Text>
@@ -248,35 +285,47 @@ export default function AppointmentDetailScreen() {
           <View style={styles.rescheduleForm}>
             <Text style={styles.rescheduleTitle}>Novo horário</Text>
             <View style={styles.rescheduleRow}>
-              <View style={styles.rescheduleField}>
-                <Text style={styles.fieldLabel}>Data (AAAA-MM-DD)</Text>
-                <TextInput
-                  value={newDate}
-                  onChangeText={setNewDate}
-                  placeholder="2026-07-21"
-                  placeholderTextColor="#6b7280"
-                  style={styles.input}
-                  autoCapitalize="none"
-                />
-              </View>
-              <View style={styles.rescheduleField}>
-                <Text style={styles.fieldLabel}>Hora (HH:mm)</Text>
-                <TextInput
-                  value={newTime}
-                  onChangeText={setNewTime}
-                  placeholder="14:00"
-                  placeholderTextColor="#6b7280"
-                  style={styles.input}
-                  autoCapitalize="none"
-                />
-              </View>
+              <Pressable
+                onPress={() => setPickerMode("date")}
+                style={({ pressed }) => [styles.pickerButton, pressed && styles.actionPressed]}
+              >
+                <Text style={styles.fieldLabel}>Data</Text>
+                <Text style={styles.pickerValue}>
+                  {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setPickerMode("time")}
+                style={({ pressed }) => [styles.pickerButton, pressed && styles.actionPressed]}
+              >
+                <Text style={styles.fieldLabel}>Hora</Text>
+                <Text style={styles.pickerValue}>{format(selectedDate, "HH:mm")}</Text>
+              </Pressable>
             </View>
+
+            {pickerMode !== null ? (
+              <DateTimePicker
+                value={selectedDate}
+                mode={pickerMode}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={onPickerChange}
+                minimumDate={new Date()}
+                locale="pt-BR"
+                themeVariant="dark"
+              />
+            ) : null}
+
+            {Platform.OS === "ios" && pickerMode !== null ? (
+              <Pressable onPress={() => setPickerMode(null)} style={styles.iosHintChip}>
+                <Text style={styles.iosHintText}>Pronto</Text>
+              </Pressable>
+            ) : null}
+
             <View style={styles.rescheduleActions}>
               <Pressable
                 onPress={() => {
                   setRescheduling(false);
-                  setNewDate("");
-                  setNewTime("");
+                  setPickerMode(null);
                 }}
                 style={({ pressed }) => [styles.cancelButton, pressed && styles.actionPressed]}
               >
@@ -495,23 +544,40 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 12,
   },
-  rescheduleField: {
+  pickerButton: {
+    backgroundColor: "#111",
+    borderColor: "#2a2a2a",
+    borderRadius: 12,
+    borderWidth: 1,
     flex: 1,
     gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   fieldLabel: {
     color: "#9ca3af",
     fontSize: 12,
   },
-  input: {
-    backgroundColor: "#111",
-    borderColor: "#2a2a2a",
-    borderRadius: 12,
-    borderWidth: 1,
+  pickerValue: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  iosHintRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  iosHintChip: {
+    backgroundColor: "#222",
+    borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 8,
+  },
+  iosHintText: {
+    color: "#D4AF37",
+    fontSize: 13,
+    fontWeight: "600",
   },
   rescheduleActions: {
     flexDirection: "row",

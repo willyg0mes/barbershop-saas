@@ -20,7 +20,7 @@ class UpdateAppointmentRequest extends FormRequest
     {
         return [
             'status' => ['nullable', Rule::enum(AppointmentStatus::class)],
-            'starts_at' => ['nullable', 'date', 'date_format:Y-m-d\TH:i:sP'],
+            'starts_at' => ['nullable', 'date'],
         ];
     }
 }
