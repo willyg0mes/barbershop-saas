@@ -81,7 +81,58 @@ cd mobile && npm run typecheck
 2. Instalar `@notifee/react-native` no dev client / EAS build
 3. Secret `FCM_SERVER_KEY` no GitHub para envio server-side (Passo 5)
 
-## Build EAS (futuro)
+## Build APK (local, sem EAS cloud)
+
+O limite do plano free do EAS não impede build local. Duas opções:
+
+### Opção A — Gradle (recomendado, sem Docker)
+
+Requisitos: **JDK 17**, **Android SDK** (`ANDROID_HOME`), Node 20+.
+
+```bash
+cd mobile
+export ANDROID_HOME=$HOME/Android/Sdk   # ajuste se necessário
+export EXPO_PUBLIC_API_URL=https://barber.wynext.online
+
+npm run apk:debug
+# APK em: mobile/dist/barbershop-staff-debug.apk
+```
+
+Primeira execução roda `expo prebuild` e demora ~15 min (download Gradle/deps). As seguintes são bem mais rápidas.
+
+**Instalar no celular:** copie o `.apk`, abra no Android e permita “fontes desconhecidas”, ou:
+
+```bash
+adb install -r dist/barbershop-staff-debug.apk
+```
+
+**Release assinado** (Play Store / distribuição formal):
+
+```bash
+keytool -genkeypair -v -storetype PKCS12 \
+  -keystore barbershop-release.keystore -alias barbershop \
+  -keyalg RSA -keysize 2048 -validity 10000
+
+# Crie android/keystore.properties (não commitar)
+npm run apk:release
+```
+
+### Opção B — EAS local (usa Docker, não conta quota cloud)
+
+```bash
+npm i -g eas-cli
+eas build -p android --profile preview --local
+```
+
+Precisa de Docker instalado na máquina.
+
+### Opção C — EAS cloud (quota free)
+
+```bash
+npx eas build -p android --profile preview
+```
+
+## Build EAS (cloud)
 
 ```bash
 cd mobile
