@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Api\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Validator;
 
 class StoreTimeBlockRequest extends FormRequest
 {
@@ -19,21 +18,9 @@ class StoreTimeBlockRequest extends FormRequest
     {
         return [
             'barber_id' => ['nullable', 'integer', 'exists:users,id'],
-            'starts_at' => ['required', 'date', 'date_format:Y-m-d\TH:i:sP'],
-            'ends_at' => ['required', 'date', 'date_format:Y-m-d\TH:i:sP'],
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
             'reason' => ['nullable', 'string', 'max:255'],
         ];
-    }
-
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function (Validator $validator): void {
-            $start = $this->input('starts_at');
-            $end = $this->input('ends_at');
-
-            if (is_string($start) && is_string($end) && $start >= $end) {
-                $validator->errors()->add('ends_at', 'End time must be after start time.');
-            }
-        });
     }
 }

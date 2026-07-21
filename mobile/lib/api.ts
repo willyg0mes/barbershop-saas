@@ -256,10 +256,11 @@ export async function rescheduleAppointment(
 
 export async function fetchTimeBlocks(
   token: string,
-  date: string,
+  date?: string,
 ): Promise<TimeBlock[]> {
+  const query = date ? `?date=${date}` : "";
   const payload = await apiFetch<ApiEnvelope<TimeBlock[]>>(
-    `/api/v1/time-blocks?date=${date}`,
+    `/api/v1/time-blocks${query}`,
     {},
     token,
   );

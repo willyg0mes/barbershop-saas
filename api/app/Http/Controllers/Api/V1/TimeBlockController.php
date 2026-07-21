@@ -29,7 +29,17 @@ class TimeBlockController extends Controller
             $dayStart = $date->copy()->startOfDay();
             $dayEnd = $date->copy()->endOfDay();
 
-            $query->whereBetween('starts_at', [$dayStart, $dayEnd]);
+            // Inclui bloqueios de vários dias que cruzam a data
+            $query->where('starts_at', '<=', $dayEnd)
+                ->where('ends_at', '>=', $dayStart);
+        }
+
+        if ($request->filled('from')) {
+            $query->where('ends_at', '>=', Carbon::parse($request->string('from')->toString())->startOfDay());
+        }
+
+        if ($request->filled('to')) {
+            $query->where('starts_at', '<=', Carbon::parse($request->string('to')->toString())->endOfDay());
         }
 
         if ($user->isBarber()) {
