@@ -11,7 +11,6 @@ use App\Models\User;
 use App\Services\TenantProvisioningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class PlatformTenantController extends Controller
 {
