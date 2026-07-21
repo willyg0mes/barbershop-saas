@@ -10,11 +10,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Screen } from "@/components/Screen";
-import { fetchAppointment, updateAppointmentStatus } from "@/lib/api";
+import { fetchAppointment, rescheduleAppointment, updateAppointmentStatus } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { showLocalNotification } from "@/lib/notifications";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
@@ -44,6 +45,9 @@ export default function AppointmentDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -146,6 +150,33 @@ export default function AppointmentDetailScreen() {
     );
   }
 
+  async function handleReschedule() {
+    if (!token || !appointment) return;
+    if (!newDate.trim() || !newTime.trim()) {
+      Alert.alert("Campos obrigatórios", "Informe data e horário.");
+      return;
+    }
+
+    setUpdating(true);
+    setError(null);
+
+    try {
+      const newStartsAt = `${newDate.trim()}T${newTime.trim()}:00`;
+      const updated = await rescheduleAppointment(token, appointment.id, newStartsAt);
+      setAppointment(updated);
+      setRescheduling(false);
+      setNewDate("");
+      setNewTime("");
+      await showLocalNotification("Reagendado", `${updated.client_name} · novo horário`);
+      Alert.alert("Pronto", "Horário reagendado com sucesso.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Erro ao reagendar");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  const canReschedule = appointment.status === "pending" || appointment.status === "confirmed";
   const startsAt = format(parseISO(appointment.starts_at), "dd/MM 'às' HH:mm", { locale: ptBR });
   const services = appointment.services.map((service) => service.name).join(" + ");
 
@@ -201,6 +232,69 @@ export default function AppointmentDetailScreen() {
           <View style={styles.notes}>
             <Text style={styles.notesLabel}>Observações</Text>
             <Text style={styles.notesText}>{appointment.notes}</Text>
+          </View>
+        ) : null}
+
+        {canReschedule && !rescheduling ? (
+          <Pressable
+            onPress={() => setRescheduling(true)}
+            style={({ pressed }) => [styles.rescheduleButton, pressed && styles.actionPressed]}
+          >
+            <Text style={styles.rescheduleText}>Reagendar</Text>
+          </Pressable>
+        ) : null}
+
+        {rescheduling ? (
+          <View style={styles.rescheduleForm}>
+            <Text style={styles.rescheduleTitle}>Novo horário</Text>
+            <View style={styles.rescheduleRow}>
+              <View style={styles.rescheduleField}>
+                <Text style={styles.fieldLabel}>Data (AAAA-MM-DD)</Text>
+                <TextInput
+                  value={newDate}
+                  onChangeText={setNewDate}
+                  placeholder="2026-07-21"
+                  placeholderTextColor="#6b7280"
+                  style={styles.input}
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={styles.rescheduleField}>
+                <Text style={styles.fieldLabel}>Hora (HH:mm)</Text>
+                <TextInput
+                  value={newTime}
+                  onChangeText={setNewTime}
+                  placeholder="14:00"
+                  placeholderTextColor="#6b7280"
+                  style={styles.input}
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+            <View style={styles.rescheduleActions}>
+              <Pressable
+                onPress={() => {
+                  setRescheduling(false);
+                  setNewDate("");
+                  setNewTime("");
+                }}
+                style={({ pressed }) => [styles.cancelButton, pressed && styles.actionPressed]}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                disabled={updating}
+                onPress={() => void handleReschedule()}
+                style={({ pressed }) => [
+                  styles.confirmButton,
+                  (pressed || updating) && styles.actionPressed,
+                ]}
+              >
+                <Text style={styles.confirmButtonText}>
+                  {updating ? "Salvando..." : "Confirmar"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         ) : null}
 
@@ -365,5 +459,88 @@ const styles = StyleSheet.create({
     color: "#f87171",
     marginTop: 16,
     textAlign: "center",
+  },
+  rescheduleButton: {
+    alignItems: "center",
+    backgroundColor: "#161616",
+    borderColor: "#2a2a2a",
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingVertical: 14,
+  },
+  rescheduleText: {
+    color: "#D4AF37",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  rescheduleForm: {
+    backgroundColor: "#161616",
+    borderColor: "#2a2a2a",
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 16,
+    padding: 16,
+  },
+  rescheduleTitle: {
+    color: "#D4AF37",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    marginBottom: 12,
+    textTransform: "uppercase",
+  },
+  rescheduleRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  rescheduleField: {
+    flex: 1,
+    gap: 6,
+  },
+  fieldLabel: {
+    color: "#9ca3af",
+    fontSize: 12,
+  },
+  input: {
+    backgroundColor: "#111",
+    borderColor: "#2a2a2a",
+    borderRadius: 12,
+    borderWidth: 1,
+    color: "#fff",
+    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  rescheduleActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  cancelButton: {
+    alignItems: "center",
+    backgroundColor: "#2a1515",
+    borderColor: "#7f1d1d",
+    borderRadius: 999,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 12,
+  },
+  cancelButtonText: {
+    color: "#fca5a5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  confirmButton: {
+    alignItems: "center",
+    backgroundColor: "#D4AF37",
+    borderRadius: 999,
+    flex: 1,
+    paddingVertical: 12,
+  },
+  confirmButtonText: {
+    color: "#111",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

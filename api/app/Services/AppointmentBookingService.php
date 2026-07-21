@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendNewAppointmentPush;
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Service;
@@ -101,7 +102,7 @@ class AppointmentBookingService
             }
 
             $appointment->services()->attach($attach);
-            $appointment->load(['barber', 'services']);
+            $appointment->load(['barber', 'services', 'tenant']);
 
             Log::channel('structured')->info('appointment.created', [
                 'tenant_id' => $tenant->id,
@@ -111,6 +112,11 @@ class AppointmentBookingService
                 'duration_minutes' => $duration,
                 'service_ids' => $services->pluck('id')->all(),
             ]);
+
+            DB::afterCommit(function () use ($appointment): void {
+                // sync: não depende de worker de fila em produção
+                SendNewAppointmentPush::dispatchSync($appointment->id);
+            });
 
             return $appointment;
         });

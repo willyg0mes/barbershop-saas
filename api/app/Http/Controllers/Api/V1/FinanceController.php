@@ -39,23 +39,71 @@ class FinanceController extends Controller
             ->where('status', AppointmentStatus::Completed)
             ->sum('total_price_cents');
 
-        return response()->json([
-            'data' => [
-                'date' => $date->toDateString(),
+        $data = [
+            'date' => $date->toDateString(),
+            'completed_count' => $completedCount,
+            'total_revenue_cents' => $totalRevenueCents,
+            'total_revenue_formatted' => number_format($totalRevenueCents / 100, 2, ',', '.'),
+            'pending_count' => (clone $baseQuery)->whereIn('status', [
+                AppointmentStatus::Pending,
+                AppointmentStatus::Confirmed,
+                AppointmentStatus::InProgress,
+            ])->count(),
+            'cancelled_count' => (clone $baseQuery)->whereIn('status', [
+                AppointmentStatus::Cancelled,
+                AppointmentStatus::NoShow,
+            ])->count(),
+        ];
+
+        $commissionEnabled = (bool) ($tenant->settings['commission_enabled'] ?? false);
+        $commissionPercent = (float) ($tenant->settings['commission_percent'] ?? 0);
+
+        if ($commissionEnabled && $user->isOwner() && $barberFilter === null) {
+            $data['commission_percent'] = $commissionPercent;
+            $data['by_barber'] = $this->getBarberBreakdown($tenant, $dayStart, $dayEnd, $commissionPercent);
+        }
+
+        return response()->json(['data' => $data]);
+    }
+
+    private function getBarberBreakdown(\App\Models\Tenant $tenant, Carbon $dayStart, Carbon $dayEnd, float $commissionPercent): array
+    {
+        $barbers = User::query()
+            ->forTenant($tenant)
+            ->whereIn('role', [\App\Enums\UserRole::Barber, \App\Enums\UserRole::Owner])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $breakdown = [];
+
+        foreach ($barbers as $barber) {
+            $completedCount = Appointment::query()
+                ->forTenant($tenant)
+                ->where('barber_id', $barber->id)
+                ->where('status', AppointmentStatus::Completed)
+                ->whereBetween('starts_at', [$dayStart, $dayEnd])
+                ->count();
+
+            $revenueCents = (int) Appointment::query()
+                ->forTenant($tenant)
+                ->where('barber_id', $barber->id)
+                ->where('status', AppointmentStatus::Completed)
+                ->whereBetween('starts_at', [$dayStart, $dayEnd])
+                ->sum('total_price_cents');
+
+            $commissionCents = (int) round($revenueCents * ($commissionPercent / 100));
+
+            $breakdown[] = [
+                'id' => $barber->id,
+                'name' => $barber->name,
                 'completed_count' => $completedCount,
-                'total_revenue_cents' => $totalRevenueCents,
-                'total_revenue_formatted' => number_format($totalRevenueCents / 100, 2, ',', '.'),
-                'pending_count' => (clone $baseQuery)->whereIn('status', [
-                    AppointmentStatus::Pending,
-                    AppointmentStatus::Confirmed,
-                    AppointmentStatus::InProgress,
-                ])->count(),
-                'cancelled_count' => (clone $baseQuery)->whereIn('status', [
-                    AppointmentStatus::Cancelled,
-                    AppointmentStatus::NoShow,
-                ])->count(),
-            ],
-        ]);
+                'revenue_cents' => $revenueCents,
+                'commission_cents' => $commissionCents,
+            ];
+        }
+
+        return $breakdown;
     }
 
     private function resolveBarberFilter(FinanceSummaryRequest $request, User $user): int|JsonResponse|null

@@ -11,6 +11,8 @@ export type TenantBranding = {
   settings: {
     slot_interval_minutes: number;
     booking_lead_minutes: number;
+    cancellation_hours_notice?: number;
+    show_barber_photos?: boolean;
   };
 };
 
@@ -36,6 +38,7 @@ export type Barber = {
 export type AvailabilityBarber = {
   id: number;
   name: string;
+  avatar_url?: string | null;
   slots: string[];
 };
 

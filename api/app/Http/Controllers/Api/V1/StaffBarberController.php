@@ -69,6 +69,10 @@ class StaffBarberController extends Controller
             $barber->phone = $data['phone'];
         }
 
+        if (array_key_exists('avatar_url', $data)) {
+            $barber->avatar_url = $data['avatar_url'];
+        }
+
         if (! empty($data['password'])) {
             $barber->password = Hash::make($data['password']);
         }

@@ -18,6 +18,8 @@ class BusinessHourResource extends JsonResource
             'day_of_week' => $this->day_of_week,
             'open_time' => $this->open_time ? substr((string) $this->open_time, 0, 5) : null,
             'close_time' => $this->close_time ? substr((string) $this->close_time, 0, 5) : null,
+            'break_start' => $this->break_start ? substr((string) $this->break_start, 0, 5) : null,
+            'break_end' => $this->break_end ? substr((string) $this->break_end, 0, 5) : null,
             'is_closed' => (bool) $this->is_closed,
         ];
     }

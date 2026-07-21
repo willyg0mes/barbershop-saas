@@ -6,8 +6,11 @@ use App\Enums\AppointmentStatus;
 use App\Enums\UserRole;
 use App\Models\Appointment;
 use App\Models\BusinessHour;
+use App\Models\ClosedDate;
+use App\Models\ScheduleBreak;
 use App\Models\Service;
 use App\Models\Tenant;
+use App\Models\TimeBlock;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -21,7 +24,7 @@ class AvailabilityService
      *     date: string,
      *     duration_minutes: int,
      *     timezone: string,
-     *     barbers: list<array{id: int, name: string, slots: list<string>}>
+     *     barbers: list<array{id: int, name: string, avatar_url: ?string, slots: list<string>}>
      * }
      */
     public function getAvailableSlots(
@@ -47,25 +50,32 @@ class AvailabilityService
         $leadMinutes = (int) ($tenant->settings['booking_lead_minutes'] ?? 30);
         $earliestBookable = $now->copy()->addMinutes($leadMinutes);
 
+        $tenantClosed = ClosedDate::query()
+            ->forTenant($tenant)
+            ->whereNull('barber_id')
+            ->whereDate('date', $localDate->toDateString())
+            ->exists();
+
         $barberSlots = [];
 
         foreach ($barbers as $barber) {
-            $hours = $this->resolveBusinessHours($tenant, $barber, $localDate);
-
-            if ($hours === null || $hours->is_closed || ! $hours->open_time || ! $hours->close_time) {
-                $barberSlots[] = [
-                    'id' => $barber->id,
-                    'name' => $barber->name,
-                    'slots' => [],
-                ];
+            if ($tenantClosed || $this->isBarberClosedOnDate($tenant, $barber, $localDate)) {
+                $barberSlots[] = $this->emptyBarber($barber);
 
                 continue;
             }
 
-            $openAt = $localDate->copy()->setTimeFromTimeString($hours->open_time);
-            $closeAt = $localDate->copy()->setTimeFromTimeString($hours->close_time);
+            $hours = $this->resolveBusinessHours($tenant, $barber, $localDate);
 
-            $appointments = $this->loadBlockingAppointments($tenant, $barber, $localDate, $timezone);
+            if ($hours === null || $hours->is_closed || ! $hours->open_time || ! $hours->close_time) {
+                $barberSlots[] = $this->emptyBarber($barber);
+
+                continue;
+            }
+
+            $openAt = $localDate->copy()->setTimeFromTimeString((string) $hours->open_time);
+            $closeAt = $localDate->copy()->setTimeFromTimeString((string) $hours->close_time);
+            $blockedRanges = $this->loadBlockedRanges($tenant, $barber, $localDate, $hours);
             $slots = [];
 
             for ($cursor = $openAt->copy(); $cursor->copy()->addMinutes($durationMinutes)->lte($closeAt); $cursor->addMinutes($slotInterval)) {
@@ -75,7 +85,7 @@ class AvailabilityService
 
                 $slotEnd = $cursor->copy()->addMinutes($durationMinutes);
 
-                if ($this->overlapsAny($cursor, $slotEnd, $appointments)) {
+                if ($this->overlapsAnyRange($cursor, $slotEnd, $blockedRanges)) {
                     continue;
                 }
 
@@ -85,6 +95,7 @@ class AvailabilityService
             $barberSlots[] = [
                 'id' => $barber->id,
                 'name' => $barber->name,
+                'avatar_url' => $barber->avatar_url,
                 'slots' => $slots,
             ];
         }
@@ -162,19 +173,30 @@ class AvailabilityService
             ->first();
     }
 
+    protected function isBarberClosedOnDate(Tenant $tenant, User $barber, Carbon $localDate): bool
+    {
+        return ClosedDate::query()
+            ->forTenant($tenant)
+            ->where('barber_id', $barber->id)
+            ->whereDate('date', $localDate->toDateString())
+            ->exists();
+    }
+
     /**
-     * @return Collection<int, Appointment>
+     * @return list<array{0: Carbon, 1: Carbon}>
      */
-    protected function loadBlockingAppointments(
+    protected function loadBlockedRanges(
         Tenant $tenant,
         User $barber,
         Carbon $localDate,
-        string $timezone,
-    ): Collection {
+        BusinessHour $hours,
+    ): array {
+        $ranges = [];
+
         $dayStart = $localDate->copy()->utc();
         $dayEnd = $localDate->copy()->endOfDay()->utc();
 
-        return Appointment::query()
+        $appointments = Appointment::query()
             ->forTenant($tenant)
             ->where('barber_id', $barber->id)
             ->whereIn('status', [
@@ -185,26 +207,75 @@ class AvailabilityService
             ->where('starts_at', '<', $dayEnd)
             ->where('ends_at', '>', $dayStart)
             ->get(['starts_at', 'ends_at']);
+
+        foreach ($appointments as $appointment) {
+            $ranges[] = [
+                $appointment->starts_at->copy()->timezone($tenant->timezone),
+                $appointment->ends_at->copy()->timezone($tenant->timezone),
+            ];
+        }
+
+        $blocks = TimeBlock::query()
+            ->forTenant($tenant)
+            ->where('barber_id', $barber->id)
+            ->where('starts_at', '<', $dayEnd)
+            ->where('ends_at', '>', $dayStart)
+            ->get(['starts_at', 'ends_at']);
+
+        foreach ($blocks as $block) {
+            $ranges[] = [
+                $block->starts_at->copy()->timezone($tenant->timezone),
+                $block->ends_at->copy()->timezone($tenant->timezone),
+            ];
+        }
+
+        if ($hours->break_start && $hours->break_end) {
+            $ranges[] = [
+                $localDate->copy()->setTimeFromTimeString((string) $hours->break_start),
+                $localDate->copy()->setTimeFromTimeString((string) $hours->break_end),
+            ];
+        }
+
+        $breaks = ScheduleBreak::query()
+            ->forTenant($tenant)
+            ->where('is_active', true)
+            ->where(function ($query) use ($barber) {
+                $query->whereNull('barber_id')->orWhere('barber_id', $barber->id);
+            })
+            ->get();
+
+        foreach ($breaks as $break) {
+            $ranges[] = [
+                $localDate->copy()->setTimeFromTimeString((string) $break->start_time),
+                $localDate->copy()->setTimeFromTimeString((string) $break->end_time),
+            ];
+        }
+
+        return $ranges;
     }
 
     /**
-     * @param  Collection<int, Appointment>  $appointments
+     * @param  list<array{0: Carbon, 1: Carbon}>  $ranges
      */
-    protected function overlapsAny(Carbon $start, Carbon $end, Collection $appointments): bool
+    protected function overlapsAnyRange(Carbon $start, Carbon $end, array $ranges): bool
     {
-        $startUtc = $start->copy()->utc();
-        $endUtc = $end->copy()->utc();
-
-        foreach ($appointments as $appointment) {
-            $appointmentStart = $appointment->starts_at->copy()->utc();
-            $appointmentEnd = $appointment->ends_at->copy()->utc();
-
-            if ($startUtc->lt($appointmentEnd) && $endUtc->gt($appointmentStart)) {
+        foreach ($ranges as [$rangeStart, $rangeEnd]) {
+            if ($start->lt($rangeEnd) && $end->gt($rangeStart)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    protected function emptyBarber(User $barber): array
+    {
+        return [
+            'id' => $barber->id,
+            'name' => $barber->name,
+            'avatar_url' => $barber->avatar_url,
+            'slots' => [],
+        ];
     }
 
     protected function emptyResponse(Carbon $localDate, int $durationMinutes, string $timezone): array

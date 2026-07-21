@@ -472,6 +472,11 @@ export function ChatBooking({
         <ChatBubble role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
           <div className="space-y-3">
             <p className="font-semibold">Serviços disponíveis</p>
+            {tenant.settings.cancellation_hours_notice && tenant.settings.cancellation_hours_notice > 0 && (
+              <p className="text-xs text-gray-400">
+                Cancelamento: avise com {tenant.settings.cancellation_hours_notice}h de antecedência
+              </p>
+            )}
             <div className="flex flex-col gap-2">
               {services.map((service) => {
                 const active = serviceIds.includes(service.id);
@@ -554,7 +559,15 @@ export function ChatBooking({
                 {availabilityBarbers.map((barber) => (
                   <div key={barber.id} className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <ChatAvatar variant="barber" name={barber.name} className="h-8 w-8 text-xs" />
+                      {tenant.settings.show_barber_photos && barber.avatar_url ? (
+                        <img
+                          src={barber.avatar_url}
+                          alt={barber.name}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <ChatAvatar variant="barber" name={barber.name} className="h-8 w-8 text-xs" />
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold">{barber.name}</p>
                         <p className="text-[11px] text-muted-foreground">
@@ -613,6 +626,11 @@ export function ChatBooking({
       {!typing && step === "success" && appointment ? (
         <ChatBubble role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
           <div className="space-y-3">
+            {tenant.settings.cancellation_hours_notice && tenant.settings.cancellation_hours_notice > 0 && (
+              <p className="text-xs text-gray-400">
+                Para cancelar, avise com {tenant.settings.cancellation_hours_notice}h de antecedência
+              </p>
+            )}
             <div className="rounded-2xl border border-white/10 bg-background/40 p-3">
               <p className="font-semibold">{selectedServices.map((s) => s.name).join(" + ")}</p>
               <p className="mt-1 text-xs text-muted-foreground">

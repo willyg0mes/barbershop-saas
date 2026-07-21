@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\AppointmentStatus as AppointmentStatusEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexAppointmentsRequest;
 use App\Http\Requests\Api\V1\UpdateAppointmentRequest;
@@ -9,6 +10,7 @@ use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
 use App\Models\User;
 use App\Services\AppointmentStatusService;
+use App\Services\AvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -64,15 +66,55 @@ class StaffAppointmentController extends Controller
         }
 
         try {
-            $updated = $this->statusService->updateStatus(
-                $appointment,
-                $request->enum('status', \App\Enums\AppointmentStatus::class),
-            );
+            // Reschedule
+            if ($request->filled('starts_at')) {
+                return $this->reschedule($request, $appointment);
+            }
 
-            return new AppointmentResource($updated);
+            // Status update
+            if ($request->filled('status')) {
+                $updated = $this->statusService->updateStatus(
+                    $appointment,
+                    $request->enum('status', AppointmentStatusEnum::class),
+                );
+
+                return new AppointmentResource($updated);
+            }
+
+            return response()->json(['message' => 'No update provided.'], 422);
         } catch (InvalidArgumentException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }
+    }
+
+    private function reschedule(UpdateAppointmentRequest $request, Appointment $appointment): AppointmentResource|JsonResponse
+    {
+        if (! in_array($appointment->status, [AppointmentStatusEnum::Pending, AppointmentStatusEnum::Confirmed], true)) {
+            return response()->json(['message' => 'Only pending or confirmed appointments can be rescheduled.'], 422);
+        }
+
+        $tenant = $appointment->tenant;
+        $newStartsAt = Carbon::parse($request->input('starts_at'));
+        $durationMinutes = $appointment->services->sum('pivot.duration_minutes');
+
+        $availability = $this->availabilityService->getAvailableSlots(
+            $tenant,
+            $newStartsAt,
+            $durationMinutes,
+            $appointment->barber_id
+        );
+
+        $barberSlots = collect($availability['barbers'])->firstWhere('id', $appointment->barber_id);
+
+        if ($barberSlots === null || ! in_array($newStartsAt->toIso8601String(), $barberSlots['slots'], true)) {
+            return response()->json(['message' => 'Selected time slot is not available.'], 422);
+        }
+
+        $appointment->starts_at = $newStartsAt;
+        $appointment->ends_at = $newStartsAt->copy()->addMinutes($durationMinutes);
+        $appointment->save();
+
+        return new AppointmentResource($appointment->fresh(['barber', 'services']));
     }
 
     private function resolveBarberFilter(IndexAppointmentsRequest $request, User $user): int|JsonResponse|null

@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'booking_base_url' => env('BOOKING_BASE_URL', 'https://app.wynext.online'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

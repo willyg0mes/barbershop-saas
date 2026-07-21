@@ -32,6 +32,7 @@ class UpdateStaffBarberRequest extends FormRequest
             ],
             'password' => ['sometimes', 'nullable', 'string', 'min:6', 'max:72'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'avatar_url' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
     }
 }

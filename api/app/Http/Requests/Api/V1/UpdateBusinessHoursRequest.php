@@ -23,6 +23,8 @@ class UpdateBusinessHoursRequest extends FormRequest
             'days.*.is_closed' => ['required', 'boolean'],
             'days.*.open_time' => ['nullable', 'date_format:H:i'],
             'days.*.close_time' => ['nullable', 'date_format:H:i'],
+            'days.*.break_start' => ['nullable', 'date_format:H:i'],
+            'days.*.break_end' => ['nullable', 'date_format:H:i'],
         ];
     }
 
@@ -47,6 +49,25 @@ class UpdateBusinessHoursRequest extends FormRequest
 
                 if ($open >= $close) {
                     $validator->errors()->add("days.{$index}.close_time", 'Close time must be after open time.');
+                }
+
+                $breakStart = $day['break_start'] ?? null;
+                $breakEnd = $day['break_end'] ?? null;
+
+                if ($breakStart !== null || $breakEnd !== null) {
+                    if (! is_string($breakStart) || ! is_string($breakEnd)) {
+                        $validator->errors()->add("days.{$index}.break_start", 'Break start and end must be provided together.');
+
+                        continue;
+                    }
+
+                    if ($breakStart >= $breakEnd) {
+                        $validator->errors()->add("days.{$index}.break_end", 'Break end must be after break start.');
+                    }
+
+                    if ($breakStart < $open || $breakEnd > $close) {
+                        $validator->errors()->add("days.{$index}.break_start", 'Break times must be within business hours.');
+                    }
                 }
             }
         });

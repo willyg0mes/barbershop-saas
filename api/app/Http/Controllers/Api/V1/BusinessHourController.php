@@ -55,6 +55,9 @@ class BusinessHourController extends Controller
                     ->where('day_of_week', $dayOfWeek)
                     ->first();
 
+                $breakStart = $day['break_start'] ?? null;
+                $breakEnd = $day['break_end'] ?? null;
+
                 $payload = [
                     'tenant_id' => $tenant->id,
                     'barber_id' => null,
@@ -62,6 +65,8 @@ class BusinessHourController extends Controller
                     'is_closed' => $isClosed,
                     'open_time' => $isClosed ? null : $day['open_time'].':00',
                     'close_time' => $isClosed ? null : $day['close_time'].':00',
+                    'break_start' => ($isClosed || $breakStart === null) ? null : $breakStart.':00',
+                    'break_end' => ($isClosed || $breakEnd === null) ? null : $breakEnd.':00',
                 ];
 
                 if ($hour === null) {

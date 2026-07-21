@@ -9,6 +9,7 @@ export type User = {
   tenant_id: number;
   tenant_name?: string | null;
   tenant_slug?: string | null;
+  avatar_url?: string | null;
 };
 
 export type AppointmentStatus =
@@ -50,6 +51,15 @@ export type FinanceSummary = {
   total_revenue_formatted: string;
   pending_count: number;
   cancelled_count: number;
+  by_barber?: {
+    barber_id: number;
+    barber_name: string;
+    revenue_cents: number;
+    revenue_formatted: string;
+    commission_cents?: number;
+    commission_formatted?: string;
+  }[];
+  commission_enabled?: boolean;
 };
 
 export type LoginResponse = {
@@ -64,6 +74,8 @@ export type BusinessHour = {
   open_time: string | null;
   close_time: string | null;
   is_closed: boolean;
+  break_start?: string | null;
+  break_end?: string | null;
 };
 
 export type CreateBarberInput = {
@@ -71,4 +83,41 @@ export type CreateBarberInput = {
   email: string;
   password: string;
   phone?: string;
+};
+
+export type TimeBlock = {
+  id: number;
+  barber_id: number;
+  barber_name: string;
+  starts_at: string;
+  ends_at: string;
+  reason: string | null;
+};
+
+export type ClosedDate = {
+  id: number;
+  date: string;
+  reason: string | null;
+};
+
+export type ScheduleBreak = {
+  id: number;
+  label: string;
+  start_time: string;
+  end_time: string;
+};
+
+export type Settings = {
+  name?: string;
+  slug?: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  accent_color?: string | null;
+  booking_url?: string | null;
+  booking_lead_minutes?: number | null;
+  cancellation_hours_notice?: number | null;
+  commission_enabled?: boolean;
+  commission_percent?: number | null;
+  show_barber_photos?: boolean;
 };

@@ -2,11 +2,9 @@
 
 namespace App\Http\Requests\Api\V1;
 
-use App\Enums\AppointmentStatus;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
-class UpdateAppointmentRequest extends FormRequest
+class StoreClosedDateRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,8 +17,9 @@ class UpdateAppointmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['nullable', Rule::enum(AppointmentStatus::class)],
-            'starts_at' => ['nullable', 'date', 'date_format:Y-m-d\TH:i:sP'],
+            'barber_id' => ['nullable', 'integer', 'exists:users,id'],
+            'date' => ['required', 'date', 'date_format:Y-m-d'],
+            'reason' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

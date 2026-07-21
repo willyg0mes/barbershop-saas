@@ -79,6 +79,27 @@ export default function FinanceScreen() {
           <StatCard label="Atendimentos concluídos" value={String(summary?.completed_count ?? 0)} />
           <StatCard label="Pendentes / confirmados" value={String(summary?.pending_count ?? 0)} />
           <StatCard label="Cancelados / faltas" value={String(summary?.cancelled_count ?? 0)} />
+
+          {summary?.by_barber && summary.by_barber.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>Por barbeiro</Text>
+              {summary.by_barber.map((item) => (
+                <View key={item.barber_id} style={styles.barberCard}>
+                  <Text style={styles.barberName}>{item.barber_name}</Text>
+                  <View style={styles.barberStats}>
+                    <Text style={styles.barberRevenue}>
+                      Receita: R$ {item.revenue_formatted}
+                    </Text>
+                    {item.commission_formatted ? (
+                      <Text style={styles.barberCommission}>
+                        Comissão: R$ {item.commission_formatted}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : null}
         </ScrollView>
       )}
 
@@ -127,5 +148,40 @@ const styles = StyleSheet.create({
     color: "#f87171",
     marginTop: 12,
     textAlign: "center",
+  },
+  sectionTitle: {
+    color: "#D4AF37",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    marginTop: 16,
+    textTransform: "uppercase",
+  },
+  barberCard: {
+    backgroundColor: "#161616",
+    borderColor: "#2a2a2a",
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 16,
+  },
+  barberName: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  barberStats: {
+    gap: 4,
+  },
+  barberRevenue: {
+    color: "#9ca3af",
+    fontSize: 14,
+  },
+  barberCommission: {
+    color: "#D4AF37",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

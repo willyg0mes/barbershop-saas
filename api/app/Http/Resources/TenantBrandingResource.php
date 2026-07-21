@@ -26,6 +26,11 @@ class TenantBrandingResource extends JsonResource
             'settings' => [
                 'slot_interval_minutes' => $this->settings['slot_interval_minutes'] ?? 15,
                 'booking_lead_minutes' => $this->settings['booking_lead_minutes'] ?? 30,
+                'cancellation_hours_notice' => $this->settings['cancellation_hours_notice'] ?? 24,
+                'commission_enabled' => (bool) ($this->settings['commission_enabled'] ?? false),
+                'commission_percent' => (float) ($this->settings['commission_percent'] ?? 0),
+                'show_barber_photos' => (bool) ($this->settings['show_barber_photos'] ?? true),
+                'booking_url' => rtrim(config('app.booking_base_url', 'https://app.wynext.online'), '/').'/'.$this->slug,
             ],
         ];
     }

@@ -50,6 +50,15 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="blocks"
+        options={{
+          title: "Bloqueios",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="lock-closed-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Configurações",
