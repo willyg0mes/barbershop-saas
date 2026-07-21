@@ -695,12 +695,12 @@ export default function AdminPage() {
                     <h3 className="mb-2 text-sm font-medium text-gray-300">Por Barbeiro</h3>
                     <div className="space-y-2">
                       {financeSummary.by_barber.map((bb) => (
-                        <div key={bb.id} className="rounded-lg border border-white/10 bg-[#161616] p-4">
-                          <p className="font-medium">{bb.name}</p>
+                        <div key={bb.barber_id} className="rounded-lg border border-white/10 bg-[#161616] p-4">
+                          <p className="font-medium">{bb.barber_name}</p>
                           <p className="text-sm text-gray-400">
                             R$ {(bb.revenue_cents / 100).toFixed(2)} · {bb.completed_count}{" "}
                             agendamento{bb.completed_count !== 1 ? "s" : ""}
-                            {bb.commission_cents > 0 && (
+                            {(bb.commission_cents ?? 0) > 0 && (
                               <span className="ml-2 text-[#D4AF37]">
                                 (Comissão: R$ {(bb.commission_cents / 100).toFixed(2)})
                               </span>

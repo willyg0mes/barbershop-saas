@@ -88,7 +88,9 @@ export default function FinanceScreen() {
                   <Text style={styles.barberName}>{item.barber_name}</Text>
                   <View style={styles.barberStats}>
                     <Text style={styles.barberRevenue}>
-                      Receita: R$ {item.revenue_formatted}
+                      {item.completed_count ?? 0} concluído
+                      {(item.completed_count ?? 0) !== 1 ? "s" : ""}
+                      {" · "}Receita: R$ {item.revenue_formatted}
                     </Text>
                     {item.commission_formatted ? (
                       <Text style={styles.barberCommission}>

@@ -1,13 +1,10 @@
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   Pressable,
@@ -17,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useDialog } from "@/components/DialogProvider";
 import { Screen } from "@/components/Screen";
 import { fetchAppointment, rescheduleAppointment, updateAppointmentStatus } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -24,9 +22,37 @@ import { showLocalNotification } from "@/lib/notifications";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { openWhatsApp } from "@/lib/whatsapp";
 
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** Monta ISO com offset local a partir dos componentes civis do Date. */
 function toApiDateTime(date: Date): string {
-  // API espera ISO com offset, ex: 2026-07-21T14:00:00-03:00
-  return format(date, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const abs = Math.abs(offsetMinutes);
+  return (
+    `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}` +
+    `T${pad2(date.getHours())}:${pad2(date.getMinutes())}:00` +
+    `${sign}${pad2(Math.floor(abs / 60))}:${pad2(abs % 60)}`
+  );
+}
+
+/** Extrai Y-M-D do picker (Android Material costuma devolver meia-noite UTC). */
+function civilDateParts(date: Date): { y: number; m: number; d: number } {
+  if (Platform.OS === "android" && date.getUTCHours() === 0 && date.getUTCMinutes() === 0) {
+    return {
+      y: date.getUTCFullYear(),
+      m: date.getUTCMonth(),
+      d: date.getUTCDate(),
+    };
+  }
+
+  return {
+    y: date.getFullYear(),
+    m: date.getMonth(),
+    d: date.getDate(),
+  };
 }
 
 const NEXT_ACTIONS: Partial<Record<AppointmentStatus, { label: string; status: AppointmentStatus }[]>> = {
@@ -49,6 +75,7 @@ export default function AppointmentDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token, user } = useAuth();
+  const dialog = useDialog();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -105,7 +132,7 @@ export default function AppointmentDetailScreen() {
             `Olá${firstName ? ` ${firstName}` : ""}! Infelizmente seu horário de ${startsAtLabel} na ${shop} foi cancelado. Podemos remarcar quando quiser.`,
           );
         } else {
-          Alert.alert(
+          dialog.alert(
             "Cancelado",
             "Agendamento cancelado. Este cliente não tem telefone para avisar no WhatsApp.",
           );
@@ -126,20 +153,21 @@ export default function AppointmentDetailScreen() {
       return;
     }
 
-    Alert.alert(
-      "Cancelar horário",
-      appointment.client_phone
-        ? "O agendamento será cancelado e o WhatsApp abrirá com a mensagem para o cliente."
-        : "O agendamento será cancelado. Este cliente não tem telefone cadastrado.",
-      [
-        { text: "Voltar", style: "cancel" },
-        {
-          text: "Cancelar horário",
-          style: "destructive",
-          onPress: () => void applyStatusChange("cancelled"),
-        },
-      ],
-    );
+    void (async () => {
+      const ok = await dialog.confirm({
+        title: "Cancelar horário",
+        message: appointment.client_phone
+          ? "O agendamento será cancelado e o WhatsApp abrirá com a mensagem para o cliente."
+          : "O agendamento será cancelado. Este cliente não tem telefone cadastrado.",
+        confirmText: "Cancelar horário",
+        cancelText: "Voltar",
+        destructive: true,
+      });
+
+      if (ok) {
+        await applyStatusChange("cancelled");
+      }
+    })();
   }
 
   if (loading) {
@@ -165,28 +193,31 @@ export default function AppointmentDetailScreen() {
     setRescheduling(true);
   }
 
-  function onPickerChange(event: DateTimePickerEvent, date?: Date) {
+  function onPickerValueChange(_event: unknown, date: Date) {
     const mode = pickerMode;
+    if (!mode) return;
 
     if (Platform.OS === "android") {
       setPickerMode(null);
     }
 
-    if (event.type === "dismissed" || !date || !mode) {
-      return;
-    }
-
     setSelectedDate((current) => {
+      const next = new Date(current.getTime());
+
       if (mode === "date") {
-        const next = new Date(current);
-        next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+        const { y, m, d } = civilDateParts(date);
+        next.setFullYear(y, m, d);
+        next.setSeconds(0, 0);
         return next;
       }
 
-      const next = new Date(current);
       next.setHours(date.getHours(), date.getMinutes(), 0, 0);
       return next;
     });
+  }
+
+  function onPickerDismiss() {
+    setPickerMode(null);
   }
 
   async function handleReschedule() {
@@ -205,7 +236,7 @@ export default function AppointmentDetailScreen() {
       setRescheduling(false);
       setPickerMode(null);
       await showLocalNotification("Reagendado", `${updated.client_name} · novo horário`);
-      Alert.alert("Pronto", "Horário reagendado com sucesso.");
+      dialog.alert("Pronto", "Horário reagendado com sucesso.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Erro ao reagendar");
     } finally {
@@ -308,8 +339,10 @@ export default function AppointmentDetailScreen() {
                 value={selectedDate}
                 mode={pickerMode}
                 display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={onPickerChange}
+                onValueChange={onPickerValueChange}
+                onDismiss={onPickerDismiss}
                 minimumDate={new Date()}
+                is24Hour
                 locale="pt-BR"
                 themeVariant="dark"
               />

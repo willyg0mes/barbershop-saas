@@ -12,18 +12,27 @@ import {
   View,
 } from "react-native";
 import { AppointmentCard } from "@/components/AppointmentCard";
+import { useDialog } from "@/components/DialogProvider";
 import { Screen } from "@/components/Screen";
-import { fetchAppointments } from "@/lib/api";
+import { fetchAppointments, updateAppointmentStatus } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Appointment } from "@/lib/types";
+import type { Appointment, AppointmentStatus } from "@/lib/types";
+
+const QUICK_LABELS: Partial<Record<AppointmentStatus, string>> = {
+  confirmed: "confirmar",
+  in_progress: "iniciar",
+  completed: "concluir",
+};
 
 export default function AgendaScreen() {
   const router = useRouter();
   const { token, user, signOut } = useAuth();
+  const dialog = useDialog();
   const [selectedDate, setSelectedDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selected = useMemo(() => parseISO(selectedDate), [selectedDate]);
@@ -63,6 +72,36 @@ export default function AgendaScreen() {
     setSelectedDate((current) =>
       format(addDays(parseISO(current), offset), "yyyy-MM-dd"),
     );
+  }
+
+  async function handleQuickAction(appointment: Appointment, status: AppointmentStatus) {
+    if (!token) return;
+
+    const actionLabel = QUICK_LABELS[status] ?? "atualizar";
+    const ok = await dialog.confirm({
+      title: `${actionLabel.charAt(0).toUpperCase()}${actionLabel.slice(1)} horário`,
+      message: `${appointment.client_name} — deseja ${actionLabel} este agendamento?`,
+      confirmText: QUICK_LABELS[status]
+        ? `${QUICK_LABELS[status]!.charAt(0).toUpperCase()}${QUICK_LABELS[status]!.slice(1)}`
+        : "Confirmar",
+    });
+
+    if (!ok) return;
+
+    setUpdatingId(appointment.id);
+    setError(null);
+
+    try {
+      const updated = await updateAppointmentStatus(token, appointment.id, status);
+      setAppointments((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Erro ao atualizar");
+      dialog.alert("Erro", caught instanceof Error ? caught.message : "Erro ao atualizar");
+    } finally {
+      setUpdatingId(null);
+    }
   }
 
   return (
@@ -126,7 +165,9 @@ export default function AgendaScreen() {
           renderItem={({ item }) => (
             <AppointmentCard
               appointment={item}
+              updating={updatingId === item.id}
               onPress={() => router.push(`/(app)/appointment/${item.id}`)}
+              onQuickAction={(status) => void handleQuickAction(item, status)}
             />
           )}
           contentContainerStyle={appointments.length === 0 ? styles.emptyList : undefined}

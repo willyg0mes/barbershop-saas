@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import { SafeAreaView, StyleSheet, View, type ViewStyle } from "react-native";
+import { StyleSheet, View, type ViewStyle } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type ScreenProps = {
   children: ReactNode;
@@ -8,7 +9,7 @@ type ScreenProps = {
 
 export function Screen({ children, style }: ScreenProps) {
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <View style={[styles.container, style]}>{children}</View>
     </SafeAreaView>
   );

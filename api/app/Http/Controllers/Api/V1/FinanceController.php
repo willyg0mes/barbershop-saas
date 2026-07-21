@@ -58,16 +58,30 @@ class FinanceController extends Controller
         $commissionEnabled = (bool) ($tenant->settings['commission_enabled'] ?? false);
         $commissionPercent = (float) ($tenant->settings['commission_percent'] ?? 0);
 
-        if ($commissionEnabled && $user->isOwner() && $barberFilter === null) {
-            $data['commission_percent'] = $commissionPercent;
-            $data['by_barber'] = $this->getBarberBreakdown($tenant, $dayStart, $dayEnd, $commissionPercent);
+        $data['commission_enabled'] = $commissionEnabled;
+        $data['commission_percent'] = $commissionPercent;
+
+        // Owner sempre vê totais por barbeiro; comissão só se habilitada
+        if ($user->isOwner() && $barberFilter === null) {
+            $data['by_barber'] = $this->getBarberBreakdown(
+                $tenant,
+                $dayStart,
+                $dayEnd,
+                $commissionEnabled ? $commissionPercent : 0,
+                $commissionEnabled,
+            );
         }
 
         return response()->json(['data' => $data]);
     }
 
-    private function getBarberBreakdown(\App\Models\Tenant $tenant, Carbon $dayStart, Carbon $dayEnd, float $commissionPercent): array
-    {
+    private function getBarberBreakdown(
+        \App\Models\Tenant $tenant,
+        Carbon $dayStart,
+        Carbon $dayEnd,
+        float $commissionPercent,
+        bool $commissionEnabled = false,
+    ): array {
         $barbers = User::query()
             ->forTenant($tenant)
             ->whereIn('role', [\App\Enums\UserRole::Barber, \App\Enums\UserRole::Owner])
@@ -92,14 +106,20 @@ class FinanceController extends Controller
                 ->whereBetween('starts_at', [$dayStart, $dayEnd])
                 ->sum('total_price_cents');
 
-            $commissionCents = (int) round($revenueCents * ($commissionPercent / 100));
+            $commissionCents = $commissionEnabled
+                ? (int) round($revenueCents * ($commissionPercent / 100))
+                : 0;
 
             $breakdown[] = [
-                'id' => $barber->id,
-                'name' => $barber->name,
+                'barber_id' => $barber->id,
+                'barber_name' => $barber->name,
                 'completed_count' => $completedCount,
                 'revenue_cents' => $revenueCents,
+                'revenue_formatted' => number_format($revenueCents / 100, 2, ',', '.'),
                 'commission_cents' => $commissionCents,
+                'commission_formatted' => $commissionEnabled
+                    ? number_format($commissionCents / 100, 2, ',', '.')
+                    : null,
             ];
         }
 

@@ -137,6 +137,43 @@ class StaffAppointmentEndpointTest extends TestCase
         ]);
     }
 
+    public function test_barber_can_reschedule_appointment_keeping_local_time(): void
+    {
+        ['tenant' => $tenant, 'barber' => $barber, 'serviceA' => $service] = $this->createTenantWithSchedule();
+
+        $startsAt = now()->timezone($tenant->timezone)->addDay()->setTime(10, 0)->seconds(0);
+        $appointment = Appointment::query()->create([
+            'tenant_id' => $tenant->id,
+            'barber_id' => $barber->id,
+            'client_name' => 'Cliente Reagendar',
+            'starts_at' => $startsAt,
+            'ends_at' => $startsAt->copy()->addMinutes(30),
+            'total_duration_minutes' => 30,
+            'total_price_cents' => 4000,
+            'status' => AppointmentStatus::Confirmed,
+        ]);
+        $appointment->services()->attach($service->id, [
+            'duration_minutes' => 30,
+            'price_cents' => 4000,
+            'sort_order' => 1,
+        ]);
+
+        $newStartsAt = $startsAt->copy()->setTime(18, 0);
+        $token = $barber->createToken('test')->plainTextToken;
+
+        $this->withToken($token)
+            ->patchJson(route('v1.appointments.update', ['appointment' => $appointment->id]), [
+                'starts_at' => $newStartsAt->toIso8601String(),
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.starts_at', $newStartsAt->toIso8601String());
+
+        $this->assertDatabaseHas('appointments', [
+            'id' => $appointment->id,
+            'starts_at' => $newStartsAt->format('Y-m-d H:i:s'),
+        ]);
+    }
+
     public function test_finance_summary_returns_day_totals(): void
     {
         ['tenant' => $tenant, 'barber' => $barber] = $this->createTenantWithSchedule();

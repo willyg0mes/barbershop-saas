@@ -54,12 +54,14 @@ export type FinanceSummary = {
   by_barber?: {
     barber_id: number;
     barber_name: string;
+    completed_count?: number;
     revenue_cents: number;
     revenue_formatted: string;
     commission_cents?: number;
-    commission_formatted?: string;
+    commission_formatted?: string | null;
   }[];
   commission_enabled?: boolean;
+  commission_percent?: number;
 };
 
 export type LoginResponse = {

@@ -126,8 +126,11 @@ class StaffAppointmentController extends Controller
             return response()->json(['message' => 'Selected time slot is not available.'], 422);
         }
 
-        $appointment->starts_at = $newStartsAt->copy()->utc();
-        $appointment->ends_at = $newStartsAt->copy()->addMinutes($durationMinutes)->utc();
+        // Mantém horário no timezone do tenant. Não usar ->utc() aqui:
+        // com APP_TIMEZONE=America/Sao_Paulo o cast datetime grava o relógio
+        // UTC como se fosse local (ex.: 18:00-03 vira 21:00 na agenda).
+        $appointment->starts_at = $newStartsAt;
+        $appointment->ends_at = $newStartsAt->copy()->addMinutes($durationMinutes);
         $appointment->save();
 
         return new AppointmentResource($appointment->fresh(['barber', 'services']));

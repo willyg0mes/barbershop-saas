@@ -2,16 +2,18 @@ import { Redirect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Image,
   Linking,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { useDialog } from "@/components/DialogProvider";
 import { Screen } from "@/components/Screen";
 import {
   createClosedDate,
@@ -39,6 +41,7 @@ const DAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta",
 
 export default function SettingsScreen() {
   const { token, user } = useAuth();
+  const dialog = useDialog();
   const [hours, setHours] = useState<BusinessHour[]>([]);
   const [barbers, setBarbers] = useState<User[]>([]);
   const [scheduleBreaks, setScheduleBreaks] = useState<ScheduleBreak[]>([]);
@@ -67,6 +70,12 @@ export default function SettingsScreen() {
   const [serviceDuration, setServiceDuration] = useState("");
   const [servicePrice, setServicePrice] = useState("");
 
+  const [shopName, setShopName] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#D4AF37");
+  const [secondaryColor, setSecondaryColor] = useState("#1a1a1a");
+  const [accentColor, setAccentColor] = useState("#C5A028");
+
   const load = useCallback(async () => {
     if (!token) return;
 
@@ -87,6 +96,11 @@ export default function SettingsScreen() {
       setClosedDates(nextDates);
       setServices(nextServices);
       setSettings(nextSettings);
+      setShopName(nextSettings.name ?? "");
+      setLogoUrl(nextSettings.logo_url ?? "");
+      setPrimaryColor(nextSettings.primary_color ?? "#D4AF37");
+      setSecondaryColor(nextSettings.secondary_color ?? "#1a1a1a");
+      setAccentColor(nextSettings.accent_color ?? "#C5A028");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Erro ao carregar configurações");
     }
@@ -120,7 +134,7 @@ export default function SettingsScreen() {
     try {
       const saved = await updateBusinessHours(token, hours);
       setHours(saved);
-      Alert.alert("Salvo", "Horário de funcionamento atualizado.");
+      dialog.alert("Salvo", "Horário de funcionamento atualizado.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Erro ao salvar horário");
     } finally {
@@ -131,7 +145,7 @@ export default function SettingsScreen() {
   async function handleCreateBarber() {
     if (!token) return;
     if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Campos obrigatórios", "Informe nome, e-mail e senha.");
+      dialog.alert("Campos obrigatórios", "Informe nome, e-mail e senha.");
       return;
     }
 
@@ -150,7 +164,7 @@ export default function SettingsScreen() {
       setPassword("");
       setPhone("");
       await load();
-      Alert.alert("Pronto", "Barbeiro adicionado.");
+      dialog.alert("Pronto", "Barbeiro adicionado.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Erro ao adicionar barbeiro");
     } finally {
@@ -159,30 +173,23 @@ export default function SettingsScreen() {
   }
 
   function confirmDeactivate(barber: User) {
-    Alert.alert(
-      "Remover barbeiro",
-      `Desativar ${barber.name}? Ele deixa de aparecer na disponibilidade.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Desativar",
-          style: "destructive",
-          onPress: () => {
-            void (async () => {
-              if (!token) return;
-              try {
-                await deactivateStaffBarber(token, barber.id);
-                await load();
-              } catch (caught) {
-                setError(
-                  caught instanceof Error ? caught.message : "Erro ao desativar barbeiro",
-                );
-              }
-            })();
-          },
-        },
-      ],
-    );
+    void (async () => {
+      const ok = await dialog.confirm({
+        title: "Remover barbeiro",
+        message: `Desativar ${barber.name}? Ele deixa de aparecer na disponibilidade.`,
+        confirmText: "Desativar",
+        destructive: true,
+      });
+      if (!ok || !token) return;
+      try {
+        await deactivateStaffBarber(token, barber.id);
+        await load();
+      } catch (caught) {
+        setError(
+          caught instanceof Error ? caught.message : "Erro ao desativar barbeiro",
+        );
+      }
+    })();
   }
 
   if (loading) {
@@ -193,13 +200,152 @@ export default function SettingsScreen() {
     );
   }
 
+  async function saveBrand() {
+    if (!token) return;
+    setSavingSettings(true);
+    setError(null);
+
+    try {
+      const updated = await updateSettings(token, {
+        name: shopName.trim() || undefined,
+        logo_url: logoUrl.trim() || null,
+        primary_color: primaryColor.trim() || undefined,
+        secondary_color: secondaryColor.trim() || undefined,
+        accent_color: accentColor.trim() || undefined,
+      });
+      setSettings(updated);
+      setShopName(updated.name ?? shopName);
+      setLogoUrl(updated.logo_url ?? "");
+      setPrimaryColor(updated.primary_color ?? primaryColor);
+      setSecondaryColor(updated.secondary_color ?? secondaryColor);
+      setAccentColor(updated.accent_color ?? accentColor);
+      dialog.alert("Salvo", "Identidade da barbearia atualizada.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Erro ao salvar marca");
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  async function shareBookingLink() {
+    if (!settings?.booking_url) return;
+    try {
+      await Share.share({
+        message: `Agende seu horário: ${settings.booking_url}`,
+        url: settings.booking_url,
+      });
+    } catch {
+      // usuário cancelou
+    }
+  }
+
   return (
     <Screen style={styles.screen}>
       <Text style={styles.title}>Configurações</Text>
-      <Text style={styles.subtitle}>Horário da loja e equipe</Text>
+      <Text style={styles.subtitle}>Gerais da barbearia · equipe · políticas</Text>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.section}>Horário de funcionamento</Text>
+        <Text style={styles.section}>Geral / Marca</Text>
+        <Text style={styles.fieldLabel}>Nome da barbearia</Text>
+        <TextInput
+          value={shopName}
+          onChangeText={setShopName}
+          placeholder="Nome"
+          placeholderTextColor="#6b7280"
+          style={styles.input}
+        />
+        <Text style={styles.fieldLabel}>Logo (URL)</Text>
+        <TextInput
+          value={logoUrl}
+          onChangeText={setLogoUrl}
+          placeholder="https://..."
+          placeholderTextColor="#6b7280"
+          autoCapitalize="none"
+          style={styles.input}
+        />
+        {logoUrl.trim() ? (
+          <Image source={{ uri: logoUrl.trim() }} style={styles.logoPreview} resizeMode="contain" />
+        ) : null}
+        <View style={styles.colorRow}>
+          <View style={styles.colorField}>
+            <Text style={styles.fieldLabel}>Primária</Text>
+            <TextInput
+              value={primaryColor}
+              onChangeText={setPrimaryColor}
+              placeholder="#D4AF37"
+              placeholderTextColor="#6b7280"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            <View style={[styles.colorSwatch, { backgroundColor: primaryColor || "#D4AF37" }]} />
+          </View>
+          <View style={styles.colorField}>
+            <Text style={styles.fieldLabel}>Secundária</Text>
+            <TextInput
+              value={secondaryColor}
+              onChangeText={setSecondaryColor}
+              placeholder="#1a1a1a"
+              placeholderTextColor="#6b7280"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            <View style={[styles.colorSwatch, { backgroundColor: secondaryColor || "#1a1a1a" }]} />
+          </View>
+          <View style={styles.colorField}>
+            <Text style={styles.fieldLabel}>Destaque</Text>
+            <TextInput
+              value={accentColor}
+              onChangeText={setAccentColor}
+              placeholder="#C5A028"
+              placeholderTextColor="#6b7280"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            <View style={[styles.colorSwatch, { backgroundColor: accentColor || "#C5A028" }]} />
+          </View>
+        </View>
+        <Pressable
+          disabled={savingSettings}
+          onPress={() => void saveBrand()}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            (pressed || savingSettings) && styles.pressed,
+          ]}
+        >
+          <Text style={styles.primaryButtonText}>
+            {savingSettings ? "Salvando..." : "Salvar marca"}
+          </Text>
+        </Pressable>
+
+        {settings?.booking_url ? (
+          <>
+            <Text style={[styles.section, styles.sectionSpaced]}>Link e QR</Text>
+            <Pressable
+              onPress={() => {
+                if (settings.booking_url) {
+                  void Linking.openURL(settings.booking_url);
+                }
+              }}
+              style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+            >
+              <Text style={styles.linkText}>{settings.booking_url}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void shareBookingLink()}
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.secondaryButtonText}>Compartilhar link</Text>
+            </Pressable>
+            <Image
+              source={{
+                uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(settings.booking_url)}`,
+              }}
+              style={styles.qrImage}
+            />
+          </>
+        ) : null}
+
+        <Text style={[styles.section, styles.sectionSpaced]}>Horário de funcionamento</Text>
         {hours.map((day) => (
           <View key={day.day_of_week} style={styles.dayCard}>
             <View style={styles.dayHeader}>
@@ -398,26 +544,23 @@ export default function SettingsScreen() {
             </View>
             <Pressable
               onPress={() => {
-                Alert.alert("Remover pausa", `Excluir "${brk.label}"?`, [
-                  { text: "Cancelar", style: "cancel" },
-                  {
-                    text: "Excluir",
-                    style: "destructive",
-                    onPress: () => {
-                      void (async () => {
-                        if (!token) return;
-                        try {
-                          await deleteScheduleBreak(token, brk.id);
-                          await load();
-                        } catch (caught) {
-                          setError(
-                            caught instanceof Error ? caught.message : "Erro ao excluir pausa",
-                          );
-                        }
-                      })();
-                    },
-                  },
-                ]);
+                void (async () => {
+                  const ok = await dialog.confirm({
+                    title: "Remover pausa",
+                    message: `Excluir "${brk.label}"?`,
+                    confirmText: "Excluir",
+                    destructive: true,
+                  });
+                  if (!ok || !token) return;
+                  try {
+                    await deleteScheduleBreak(token, brk.id);
+                    await load();
+                  } catch (caught) {
+                    setError(
+                      caught instanceof Error ? caught.message : "Erro ao excluir pausa",
+                    );
+                  }
+                })();
               }}
               style={styles.dangerChip}
             >
@@ -462,7 +605,7 @@ export default function SettingsScreen() {
             void (async () => {
               if (!token) return;
               if (!breakLabel.trim() || !breakStart.trim() || !breakEnd.trim()) {
-                Alert.alert("Campos obrigatórios", "Informe nome, início e fim.");
+                dialog.alert("Campos obrigatórios", "Informe nome, início e fim.");
                 return;
               }
               try {
@@ -497,26 +640,23 @@ export default function SettingsScreen() {
             </View>
             <Pressable
               onPress={() => {
-                Alert.alert("Remover dia fechado", `Excluir ${cd.date}?`, [
-                  { text: "Cancelar", style: "cancel" },
-                  {
-                    text: "Excluir",
-                    style: "destructive",
-                    onPress: () => {
-                      void (async () => {
-                        if (!token) return;
-                        try {
-                          await deleteClosedDate(token, cd.id);
-                          await load();
-                        } catch (caught) {
-                          setError(
-                            caught instanceof Error ? caught.message : "Erro ao excluir dia fechado",
-                          );
-                        }
-                      })();
-                    },
-                  },
-                ]);
+                void (async () => {
+                  const ok = await dialog.confirm({
+                    title: "Remover dia fechado",
+                    message: `Excluir ${cd.date}?`,
+                    confirmText: "Excluir",
+                    destructive: true,
+                  });
+                  if (!ok || !token) return;
+                  try {
+                    await deleteClosedDate(token, cd.id);
+                    await load();
+                  } catch (caught) {
+                    setError(
+                      caught instanceof Error ? caught.message : "Erro ao excluir dia fechado",
+                    );
+                  }
+                })();
               }}
               style={styles.dangerChip}
             >
@@ -545,7 +685,7 @@ export default function SettingsScreen() {
             void (async () => {
               if (!token) return;
               if (!closedDate.trim()) {
-                Alert.alert("Campo obrigatório", "Informe a data.");
+                dialog.alert("Campo obrigatório", "Informe a data.");
                 return;
               }
               try {
@@ -578,26 +718,23 @@ export default function SettingsScreen() {
             </View>
             <Pressable
               onPress={() => {
-                Alert.alert("Remover serviço", `Excluir "${svc.name}"?`, [
-                  { text: "Cancelar", style: "cancel" },
-                  {
-                    text: "Excluir",
-                    style: "destructive",
-                    onPress: () => {
-                      void (async () => {
-                        if (!token) return;
-                        try {
-                          await deleteService(token, svc.id);
-                          await load();
-                        } catch (caught) {
-                          setError(
-                            caught instanceof Error ? caught.message : "Erro ao excluir serviço",
-                          );
-                        }
-                      })();
-                    },
-                  },
-                ]);
+                void (async () => {
+                  const ok = await dialog.confirm({
+                    title: "Remover serviço",
+                    message: `Excluir "${svc.name}"?`,
+                    confirmText: "Excluir",
+                    destructive: true,
+                  });
+                  if (!ok || !token) return;
+                  try {
+                    await deleteService(token, svc.id);
+                    await load();
+                  } catch (caught) {
+                    setError(
+                      caught instanceof Error ? caught.message : "Erro ao excluir serviço",
+                    );
+                  }
+                })();
               }}
               style={styles.dangerChip}
             >
@@ -642,7 +779,7 @@ export default function SettingsScreen() {
             void (async () => {
               if (!token) return;
               if (!serviceName.trim() || !serviceDuration.trim() || !servicePrice.trim()) {
-                Alert.alert("Campos obrigatórios", "Informe nome, duração e preço.");
+                dialog.alert("Campos obrigatórios", "Informe nome, duração e preço.");
                 return;
               }
               try {
@@ -823,27 +960,6 @@ export default function SettingsScreen() {
             thumbColor="#fff"
           />
         </View>
-
-        {settings?.booking_url ? (
-          <>
-            <Text style={[styles.section, styles.sectionSpaced]}>Link de agendamento</Text>
-            <Pressable
-              onPress={() => {
-                if (settings.booking_url) {
-                  void Linking.openURL(settings.booking_url);
-                }
-              }}
-              style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
-            >
-              <Text style={styles.linkText}>{settings.booking_url}</Text>
-            </Pressable>
-            <Text style={styles.qrLabel}>QR Code:</Text>
-            <Text style={styles.qrInfo}>
-              https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=
-              {encodeURIComponent(settings.booking_url)}
-            </Text>
-          </>
-        ) : null}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </ScrollView>
@@ -1045,14 +1161,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: "underline",
   },
-  qrLabel: {
-    color: "#9ca3af",
-    fontSize: 13,
-    marginTop: 12,
+  logoPreview: {
+    alignSelf: "center",
+    backgroundColor: "#0f0f0f",
+    borderColor: "#2a2a2a",
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 72,
+    marginBottom: 4,
+    width: 120,
   },
-  qrInfo: {
-    color: "#6b7280",
-    fontSize: 12,
-    marginTop: 4,
+  colorRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  colorField: {
+    flex: 1,
+    gap: 6,
+    minWidth: 96,
+  },
+  colorSwatch: {
+    borderColor: "#2a2a2a",
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 28,
+    width: "100%",
+  },
+  secondaryButton: {
+    alignItems: "center",
+    backgroundColor: "#1f1f1f",
+    borderColor: "#3a3a3a",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+  },
+  secondaryButtonText: {
+    color: "#D4AF37",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  qrImage: {
+    alignSelf: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    height: 220,
+    marginTop: 8,
+    width: 220,
   },
 });

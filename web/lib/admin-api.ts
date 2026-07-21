@@ -142,17 +142,22 @@ export type AdminBarber = {
 };
 
 export type FinanceBarberBreakdown = {
-  id: number;
-  name: string;
+  barber_id: number;
+  barber_name: string;
   completed_count: number;
   revenue_cents: number;
+  revenue_formatted?: string;
   commission_cents: number;
+  commission_formatted?: string | null;
 };
 
 export type FinanceSummary = {
   date: string;
   completed_count: number;
   total_revenue_cents: number;
+  total_revenue_formatted?: string;
+  commission_enabled?: boolean;
+  commission_percent?: number;
   by_barber?: FinanceBarberBreakdown[];
 };
 
