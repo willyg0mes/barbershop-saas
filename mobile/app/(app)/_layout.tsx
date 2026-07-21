@@ -1,4 +1,5 @@
 import { Redirect, Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, StyleSheet } from "react-native";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/lib/auth";
@@ -30,8 +31,24 @@ export default function AppLayout() {
         tabBarInactiveTintColor: "#6b7280",
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Agenda" }} />
-      <Tabs.Screen name="finance" options={{ title: "Financeiro" }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Agenda",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="finance"
+        options={{
+          title: "Financeiro",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="wallet-outline" color={color} size={size} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="appointment/[id]"
         options={{

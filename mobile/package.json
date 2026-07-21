@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "date-fns": "^4.4.0",
     "expo": "~57.0.7",
     "expo-constants": "~57.0.6",
