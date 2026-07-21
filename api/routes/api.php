@@ -13,12 +13,14 @@ use App\Http\Controllers\Api\V1\ServiceController;
 use App\Http\Controllers\Api\V1\StaffAppointmentController;
 use App\Http\Controllers\Api\V1\StaffBarberController;
 use App\Http\Controllers\Api\V1\StaffServiceController;
+use App\Http\Controllers\Api\V1\Platform\PlatformAuthController;
+use App\Http\Controllers\Api\V1\Platform\PlatformTenantController;
 use App\Http\Controllers\Api\V1\TenantBrandingController;
-use App\Http\Controllers\Api\V1\TenantRegisterController;
 use App\Http\Controllers\Api\V1\TenantResolveController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\TimeBlockController;
 use App\Http\Middleware\EnsureOwner;
+use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\ResolveTenant;
 use Illuminate\Support\Facades\Route;
@@ -27,7 +29,22 @@ Route::get('/health', HealthController::class)->name('health');
 
 Route::prefix('v1')->middleware('throttle:api')->name('v1.')->group(function (): void {
     Route::get('/tenants/resolve', TenantResolveController::class)->name('tenants.resolve');
-    Route::post('/tenants/register', [TenantRegisterController::class, 'store'])->name('tenants.register');
+
+    Route::prefix('platform')->name('platform.')->group(function (): void {
+        Route::post('/auth/login', [PlatformAuthController::class, 'login'])->name('auth.login');
+
+        Route::middleware(['auth:sanctum', EnsurePlatformAdmin::class])->group(function (): void {
+            Route::get('/auth/me', [PlatformAuthController::class, 'me'])->name('auth.me');
+            Route::post('/auth/logout', [PlatformAuthController::class, 'logout'])->name('auth.logout');
+            Route::patch('/auth/profile', [PlatformAuthController::class, 'updateProfile'])->name('auth.profile');
+
+            Route::get('/tenants', [PlatformTenantController::class, 'index'])->name('tenants.index');
+            Route::post('/tenants', [PlatformTenantController::class, 'store'])->name('tenants.store');
+            Route::get('/tenants/{tenant}', [PlatformTenantController::class, 'show'])->whereNumber('tenant')->name('tenants.show');
+            Route::patch('/tenants/{tenant}', [PlatformTenantController::class, 'update'])->whereNumber('tenant')->name('tenants.update');
+            Route::delete('/tenants/{tenant}', [PlatformTenantController::class, 'destroy'])->whereNumber('tenant')->name('tenants.destroy');
+        });
+    });
 
     Route::prefix('tenants/{tenant:slug}')
         ->middleware(ResolveTenant::class)

@@ -1,39 +1,31 @@
 "use client";
 
-import { loginOwner } from "@/lib/admin-api";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { loginPlatform } from "@/lib/platform-api";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-export default function AdminLoginPage() {
+export default function PlatformLoginPage() {
   const router = useRouter();
-  const [slug, setSlug] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (localStorage.getItem("platform_token")) {
+      router.replace("/platform");
+    }
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const result = await loginOwner(slug, email, password);
-
-      if (result.user?.role !== "owner") {
-        setError("Apenas proprietários podem acessar o admin");
-        setLoading(false);
-        return;
-      }
-
-      if (result.token) {
-        localStorage.setItem("owner_token", result.token);
-        localStorage.setItem("owner_tenant", slug);
-        router.push("/admin");
-      } else {
-        setError("Token não retornado");
-      }
+      const result = await loginPlatform(email, password);
+      localStorage.setItem("platform_token", result.token);
+      router.replace("/platform");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao autenticar");
     } finally {
@@ -45,28 +37,12 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-white">Admin</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Acesse o painel de gerenciamento
-          </p>
+          <p className="text-xs uppercase tracking-[0.25em] text-[#D4AF37]">Wynext</p>
+          <h1 className="mt-2 text-3xl font-bold text-white">Painel das barbearias</h1>
+          <p className="mt-2 text-sm text-gray-400">Acesso exclusivo do administrador da plataforma</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="slug" className="block text-sm font-medium text-gray-300">
-              Slug da Barbearia
-            </label>
-            <input
-              id="slug"
-              type="text"
-              required
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase())}
-              className="mt-1 w-full rounded-lg border border-white/10 bg-[#161616] px-4 py-3 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
-              placeholder="dom-corte"
-            />
-          </div>
-
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-300">
               E-mail
@@ -97,11 +73,11 @@ export default function AdminLoginPage() {
             />
           </div>
 
-          {error && (
+          {error ? (
             <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
             </div>
-          )}
+          ) : null}
 
           <button
             type="submit"

@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(PlatformAdminSeeder::class);
+
         $tenant = Tenant::query()->create([
             'name' => 'Barbearia Dom Corte',
             'slug' => 'dom-corte',

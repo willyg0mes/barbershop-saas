@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,7 +13,7 @@ class EnsureOwner
     {
         $user = $request->user();
 
-        if ($user === null || ! $user->isOwner()) {
+        if (! $user instanceof User || ! $user->isOwner()) {
             abort(Response::HTTP_FORBIDDEN, 'Owner access required.');
         }
 

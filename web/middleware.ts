@@ -41,6 +41,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/backend") ||
     pathname.startsWith("/icons") ||
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/platform") ||
     pathname.startsWith("/onboarding") ||
     pathname === "/offline" ||
     pathname.includes(".")
