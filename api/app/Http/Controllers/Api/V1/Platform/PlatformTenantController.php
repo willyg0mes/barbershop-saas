@@ -35,9 +35,9 @@ class PlatformTenantController extends Controller
         return response()->json(['data' => $tenants]);
     }
 
-    public function show(int $tenant): JsonResponse
+    public function show(int $tenantId): JsonResponse
     {
-        $model = Tenant::query()->withCount(['users', 'appointments'])->findOrFail($tenant);
+        $model = Tenant::query()->withCount(['users', 'appointments'])->findOrFail($tenantId);
 
         $owner = User::query()
             ->where('tenant_id', $model->id)
@@ -72,9 +72,9 @@ class PlatformTenantController extends Controller
         ], 201);
     }
 
-    public function update(UpdatePlatformTenantRequest $request, int $tenant): JsonResponse
+    public function update(UpdatePlatformTenantRequest $request, int $tenantId): JsonResponse
     {
-        $model = Tenant::query()->findOrFail($tenant);
+        $model = Tenant::query()->findOrFail($tenantId);
         $data = $request->validated();
 
         if (isset($data['name'])) {
@@ -124,9 +124,9 @@ class PlatformTenantController extends Controller
         ]);
     }
 
-    public function destroy(int $tenant): JsonResponse
+    public function destroy(int $tenantId): JsonResponse
     {
-        $model = Tenant::query()->findOrFail($tenant);
+        $model = Tenant::query()->findOrFail($tenantId);
         $this->provisioning->delete($model);
 
         return response()->json(null, 204);

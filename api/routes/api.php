@@ -40,9 +40,9 @@ Route::prefix('v1')->middleware('throttle:api')->name('v1.')->group(function ():
 
             Route::get('/tenants', [PlatformTenantController::class, 'index'])->name('tenants.index');
             Route::post('/tenants', [PlatformTenantController::class, 'store'])->name('tenants.store');
-            Route::get('/tenants/{tenant}', [PlatformTenantController::class, 'show'])->whereNumber('tenant')->name('tenants.show');
-            Route::patch('/tenants/{tenant}', [PlatformTenantController::class, 'update'])->whereNumber('tenant')->name('tenants.update');
-            Route::delete('/tenants/{tenant}', [PlatformTenantController::class, 'destroy'])->whereNumber('tenant')->name('tenants.destroy');
+            Route::get('/tenants/{tenantId}', [PlatformTenantController::class, 'show'])->whereNumber('tenantId')->name('tenants.show');
+            Route::patch('/tenants/{tenantId}', [PlatformTenantController::class, 'update'])->whereNumber('tenantId')->name('tenants.update');
+            Route::delete('/tenants/{tenantId}', [PlatformTenantController::class, 'destroy'])->whereNumber('tenantId')->name('tenants.destroy');
         });
     });
 

@@ -17,7 +17,7 @@ class UpdatePlatformTenantRequest extends FormRequest
      */
     public function rules(): array
     {
-        $tenantId = (int) $this->route('tenant');
+        $tenantId = (int) $this->route('tenantId');
 
         return [
             'name' => ['sometimes', 'string', 'max:120'],
