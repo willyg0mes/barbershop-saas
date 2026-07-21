@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -17,6 +18,7 @@ import { fetchAppointment, updateAppointmentStatus } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { showLocalNotification } from "@/lib/notifications";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
+import { openWhatsApp } from "@/lib/whatsapp";
 
 const NEXT_ACTIONS: Partial<Record<AppointmentStatus, { label: string; status: AppointmentStatus }[]>> = {
   pending: [
@@ -37,7 +39,7 @@ const NEXT_ACTIONS: Partial<Record<AppointmentStatus, { label: string; status: A
 export default function AppointmentDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { token } = useAuth();
+  const { token, tenantSlug } = useAuth();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -64,7 +66,7 @@ export default function AppointmentDetailScreen() {
     [appointment],
   );
 
-  async function handleStatusChange(status: AppointmentStatus) {
+  async function applyStatusChange(status: AppointmentStatus) {
     if (!token || !appointment) return;
 
     setUpdating(true);
@@ -77,11 +79,55 @@ export default function AppointmentDetailScreen() {
         "Status atualizado",
         `${updated.client_name} · ${updated.status}`,
       );
+
+      if (status === "cancelled") {
+        const startsAtLabel = format(parseISO(updated.starts_at), "dd/MM 'às' HH:mm", {
+          locale: ptBR,
+        });
+        const firstName = updated.client_name?.split(" ")[0] ?? "";
+        const shop = tenantSlug.replace(/-/g, " ");
+
+        if (updated.client_phone) {
+          await openWhatsApp(
+            updated.client_phone,
+            `Olá${firstName ? ` ${firstName}` : ""}! Infelizmente seu horário de ${startsAtLabel} na ${shop} foi cancelado. Podemos remarcar quando quiser.`,
+          );
+        } else {
+          Alert.alert(
+            "Cancelado",
+            "Agendamento cancelado. Este cliente não tem telefone para avisar no WhatsApp.",
+          );
+        }
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Erro ao atualizar status");
     } finally {
       setUpdating(false);
     }
+  }
+
+  function handleStatusChange(status: AppointmentStatus) {
+    if (!appointment) return;
+
+    if (status !== "cancelled") {
+      void applyStatusChange(status);
+      return;
+    }
+
+    Alert.alert(
+      "Cancelar horário",
+      appointment.client_phone
+        ? "O agendamento será cancelado e o WhatsApp abrirá com a mensagem para o cliente."
+        : "O agendamento será cancelado. Este cliente não tem telefone cadastrado.",
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: "Cancelar horário",
+          style: "destructive",
+          onPress: () => void applyStatusChange("cancelled"),
+        },
+      ],
+    );
   }
 
   if (loading) {
@@ -133,16 +179,11 @@ export default function AppointmentDetailScreen() {
               </Pressable>
               <Pressable
                 onPress={() => {
-                  const digits = appointment.client_phone!.replace(/\D/g, "");
-                  const phone =
-                    digits.length >= 10 && !digits.startsWith("55")
-                      ? `55${digits}`
-                      : digits;
                   const firstName = appointment.client_name?.split(" ")[0] ?? "";
-                  const message = encodeURIComponent(
+                  void openWhatsApp(
+                    appointment.client_phone!,
                     `Olá${firstName ? ` ${firstName}` : ""}! Aqui é da barbearia sobre seu horário de ${startsAt}.`,
                   );
-                  void Linking.openURL(`https://wa.me/${phone}?text=${message}`);
                 }}
                 style={({ pressed }) => [
                   styles.linkButton,
@@ -168,7 +209,7 @@ export default function AppointmentDetailScreen() {
             <Pressable
               key={action.status}
               disabled={updating}
-              onPress={() => void handleStatusChange(action.status)}
+              onPress={() => handleStatusChange(action.status)}
               style={({ pressed }) => [
                 styles.actionButton,
                 action.status === "cancelled" || action.status === "no_show"

@@ -50,6 +50,16 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Configurações",
+          href: user.role === "owner" ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="appointment/[id]"
         options={{
           href: null,

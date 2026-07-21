@@ -1,5 +1,7 @@
 import type {
   Appointment,
+  BusinessHour,
+  CreateBarberInput,
   FinanceSummary,
   LoginResponse,
   User,
@@ -36,8 +38,14 @@ async function apiFetch<T>(
     let message = `Request failed (${response.status})`;
 
     try {
-      const payload = (await response.json()) as { message?: string };
+      const payload = (await response.json()) as {
+        message?: string;
+        errors?: Record<string, string[]>;
+      };
       if (payload.message) message = payload.message;
+      else if (payload.errors) {
+        message = Object.values(payload.errors).flat()[0] ?? message;
+      }
     } catch {
       // ignore parse errors
     }
@@ -133,6 +141,72 @@ export async function fetchFinanceSummary(
   );
 
   return payload.data;
+}
+
+export async function fetchBusinessHours(token: string): Promise<BusinessHour[]> {
+  const payload = await apiFetch<ApiEnvelope<BusinessHour[]>>(
+    "/api/v1/business-hours",
+    {},
+    token,
+  );
+
+  return payload.data;
+}
+
+export async function updateBusinessHours(
+  token: string,
+  days: BusinessHour[],
+): Promise<BusinessHour[]> {
+  const payload = await apiFetch<ApiEnvelope<BusinessHour[]>>(
+    "/api/v1/business-hours",
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        days: days.map((day) => ({
+          day_of_week: day.day_of_week,
+          is_closed: day.is_closed,
+          open_time: day.is_closed ? null : day.open_time,
+          close_time: day.is_closed ? null : day.close_time,
+        })),
+      }),
+    },
+    token,
+  );
+
+  return payload.data;
+}
+
+export async function fetchStaffBarbers(token: string): Promise<User[]> {
+  const payload = await apiFetch<ApiEnvelope<User[]>>(
+    "/api/v1/staff/barbers",
+    {},
+    token,
+  );
+
+  return payload.data;
+}
+
+export async function createStaffBarber(
+  token: string,
+  input: CreateBarberInput,
+): Promise<User> {
+  const payload = await apiFetch<ApiEnvelope<User>>(
+    "/api/v1/staff/barbers",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    token,
+  );
+
+  return payload.data;
+}
+
+export async function deactivateStaffBarber(
+  token: string,
+  id: number,
+): Promise<void> {
+  await apiFetch(`/api/v1/staff/barbers/${id}`, { method: "DELETE" }, token);
 }
 
 export async function logout(token: string): Promise<void> {

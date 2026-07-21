@@ -55,3 +55,18 @@ export type LoginResponse = {
   token_type: string;
   user: User;
 };
+
+export type BusinessHour = {
+  id?: number;
+  day_of_week: number;
+  open_time: string | null;
+  close_time: string | null;
+  is_closed: boolean;
+};
+
+export type CreateBarberInput = {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+};

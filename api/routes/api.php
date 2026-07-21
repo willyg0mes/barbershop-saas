@@ -5,11 +5,14 @@ use App\Http\Controllers\Api\V1\AppointmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AvailabilityController;
 use App\Http\Controllers\Api\V1\BarberController;
+use App\Http\Controllers\Api\V1\BusinessHourController;
 use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\ServiceController;
 use App\Http\Controllers\Api\V1\StaffAppointmentController;
+use App\Http\Controllers\Api\V1\StaffBarberController;
 use App\Http\Controllers\Api\V1\TenantBrandingController;
 use App\Http\Controllers\Api\V1\TenantResolveController;
+use App\Http\Middleware\EnsureOwner;
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\ResolveTenant;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +44,16 @@ Route::prefix('v1')->middleware('throttle:api')->name('v1.')->group(function ():
             Route::get('/appointments/{appointment}', [StaffAppointmentController::class, 'show'])->name('appointments.show');
             Route::patch('/appointments/{appointment}', [StaffAppointmentController::class, 'update'])->name('appointments.update');
             Route::get('/finance/summary', [FinanceController::class, 'summary'])->name('finance.summary');
+
+            Route::middleware(EnsureOwner::class)->group(function (): void {
+                Route::get('/business-hours', [BusinessHourController::class, 'index'])->name('business-hours.index');
+                Route::put('/business-hours', [BusinessHourController::class, 'update'])->name('business-hours.update');
+
+                Route::get('/staff/barbers', [StaffBarberController::class, 'index'])->name('staff.barbers.index');
+                Route::post('/staff/barbers', [StaffBarberController::class, 'store'])->name('staff.barbers.store');
+                Route::patch('/staff/barbers/{barber}', [StaffBarberController::class, 'update'])->name('staff.barbers.update');
+                Route::delete('/staff/barbers/{barber}', [StaffBarberController::class, 'destroy'])->name('staff.barbers.destroy');
+            });
         });
     });
 });
