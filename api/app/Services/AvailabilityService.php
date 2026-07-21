@@ -32,6 +32,7 @@ class AvailabilityService
         CarbonInterface $date,
         int $durationMinutes,
         ?int $barberId = null,
+        ?int $excludeAppointmentId = null,
     ): array {
         if ($durationMinutes <= 0) {
             throw new InvalidArgumentException('Duration must be greater than zero.');
@@ -75,7 +76,7 @@ class AvailabilityService
 
             $openAt = $localDate->copy()->setTimeFromTimeString((string) $hours->open_time);
             $closeAt = $localDate->copy()->setTimeFromTimeString((string) $hours->close_time);
-            $blockedRanges = $this->loadBlockedRanges($tenant, $barber, $localDate, $hours);
+            $blockedRanges = $this->loadBlockedRanges($tenant, $barber, $localDate, $hours, $excludeAppointmentId);
             $slots = [];
 
             for ($cursor = $openAt->copy(); $cursor->copy()->addMinutes($durationMinutes)->lte($closeAt); $cursor->addMinutes($slotInterval)) {
@@ -190,13 +191,14 @@ class AvailabilityService
         User $barber,
         Carbon $localDate,
         BusinessHour $hours,
+        ?int $excludeAppointmentId = null,
     ): array {
         $ranges = [];
 
         $dayStart = $localDate->copy()->utc();
         $dayEnd = $localDate->copy()->endOfDay()->utc();
 
-        $appointments = Appointment::query()
+        $appointmentsQuery = Appointment::query()
             ->forTenant($tenant)
             ->where('barber_id', $barber->id)
             ->whereIn('status', [
@@ -205,8 +207,13 @@ class AvailabilityService
                 AppointmentStatus::InProgress,
             ])
             ->where('starts_at', '<', $dayEnd)
-            ->where('ends_at', '>', $dayStart)
-            ->get(['starts_at', 'ends_at']);
+            ->where('ends_at', '>', $dayStart);
+
+        if ($excludeAppointmentId !== null) {
+            $appointmentsQuery->whereKeyNot($excludeAppointmentId);
+        }
+
+        $appointments = $appointmentsQuery->get(['starts_at', 'ends_at']);
 
         foreach ($appointments as $appointment) {
             $ranges[] = [

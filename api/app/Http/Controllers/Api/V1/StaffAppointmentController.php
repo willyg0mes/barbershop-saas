@@ -19,7 +19,10 @@ use InvalidArgumentException;
 
 class StaffAppointmentController extends Controller
 {
-    public function __construct(protected AppointmentStatusService $statusService) {}
+    public function __construct(
+        protected AppointmentStatusService $statusService,
+        protected AvailabilityService $availabilityService,
+    ) {}
 
     public function index(IndexAppointmentsRequest $request): AnonymousResourceCollection|JsonResponse
     {
@@ -93,25 +96,38 @@ class StaffAppointmentController extends Controller
             return response()->json(['message' => 'Only pending or confirmed appointments can be rescheduled.'], 422);
         }
 
+        $appointment->loadMissing(['services', 'tenant']);
+
         $tenant = $appointment->tenant;
-        $newStartsAt = Carbon::parse($request->input('starts_at'));
-        $durationMinutes = $appointment->services->sum('pivot.duration_minutes');
+        $timezone = $tenant->timezone;
+        $newStartsAt = Carbon::parse($request->input('starts_at'))->timezone($timezone)->seconds(0);
+        $durationMinutes = (int) ($appointment->total_duration_minutes
+            ?: $appointment->services->sum('pivot.duration_minutes'));
+
+        if ($durationMinutes <= 0) {
+            return response()->json(['message' => 'Appointment duration is invalid.'], 422);
+        }
 
         $availability = $this->availabilityService->getAvailableSlots(
             $tenant,
             $newStartsAt,
             $durationMinutes,
-            $appointment->barber_id
+            $appointment->barber_id,
+            $appointment->id,
         );
 
         $barberSlots = collect($availability['barbers'])->firstWhere('id', $appointment->barber_id);
+        $requestedKey = $newStartsAt->format('Y-m-d\TH:i');
 
-        if ($barberSlots === null || ! in_array($newStartsAt->toIso8601String(), $barberSlots['slots'], true)) {
+        $isAvailable = $barberSlots !== null && collect($barberSlots['slots'])
+            ->contains(fn (string $slot): bool => Carbon::parse($slot)->timezone($timezone)->format('Y-m-d\TH:i') === $requestedKey);
+
+        if (! $isAvailable) {
             return response()->json(['message' => 'Selected time slot is not available.'], 422);
         }
 
-        $appointment->starts_at = $newStartsAt;
-        $appointment->ends_at = $newStartsAt->copy()->addMinutes($durationMinutes);
+        $appointment->starts_at = $newStartsAt->copy()->utc();
+        $appointment->ends_at = $newStartsAt->copy()->addMinutes($durationMinutes)->utc();
         $appointment->save();
 
         return new AppointmentResource($appointment->fresh(['barber', 'services']));
