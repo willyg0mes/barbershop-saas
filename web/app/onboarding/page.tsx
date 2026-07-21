@@ -3,6 +3,7 @@
 import { registerTenant } from "@/lib/admin-api";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
 export default function OnboardingPage() {
@@ -207,9 +208,9 @@ export default function OnboardingPage() {
 
         <p className="text-center text-xs text-gray-500">
           Já tem conta?{" "}
-          <a href="/admin/login" className="text-[#D4AF37] hover:underline">
+          <Link href="/admin/login" className="text-[#D4AF37] hover:underline">
             Faça login
-          </a>
+          </Link>
         </p>
       </div>
     </div>

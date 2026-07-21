@@ -16,9 +16,18 @@ import {
   getBarbers,
   updateBarber,
   getFinanceSummary,
+  type OwnerSettings,
+  type AdminService,
+  type WeeklyHour,
+  type AdminScheduleBreak,
+  type AdminClosedDate,
+  type AdminBarber,
+  type FinanceSummary,
 } from "@/lib/admin-api";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
 import {
   Loader2,
   LogOut,
@@ -46,27 +55,19 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [settings, setSettings] = useState<any>(null);
-  const [services, setServices] = useState<any[]>([]);
-  const [weeklyHours, setWeeklyHours] = useState<any[]>([]);
-  const [scheduleBreaks, setScheduleBreaks] = useState<any[]>([]);
-  const [closedDates, setClosedDates] = useState<any[]>([]);
-  const [barbers, setBarbers] = useState<any[]>([]);
-  const [financeSummary, setFinanceSummary] = useState<any>(null);
+  const [settings, setSettings] = useState<OwnerSettings | null>(null);
+  const [services, setServices] = useState<AdminService[]>([]);
+  const [weeklyHours, setWeeklyHours] = useState<WeeklyHour[]>([]);
+  const [scheduleBreaks, setScheduleBreaks] = useState<AdminScheduleBreak[]>([]);
+  const [closedDates, setClosedDates] = useState<AdminClosedDate[]>([]);
+  const [barbers, setBarbers] = useState<AdminBarber[]>([]);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummary | null>(null);
 
   const [copied, setCopied] = useState(false);
   const slug = typeof window !== "undefined" ? localStorage.getItem("owner_tenant") : null;
   const bookingUrl = settings?.booking_url || (slug ? `https://app.wynext.online/${slug}` : "");
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("owner_token")) {
-      router.replace("/admin/login");
-      return;
-    }
-    loadData();
-  }, [activeTab]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -100,7 +101,15 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("owner_token")) {
+      router.replace("/admin/login");
+      return;
+    }
+    void loadData();
+  }, [activeTab, loadData, router]);
 
   const handleLogout = () => {
     localStorage.removeItem("owner_token");
@@ -119,7 +128,7 @@ export default function AdminPage() {
     setTimeout(() => setSuccess(""), 3000);
   };
 
-  const saveSettings = async (updates: any) => {
+  const saveSettings = async (updates: Partial<OwnerSettings>) => {
     setSaving(true);
     setError("");
     try {
@@ -225,7 +234,7 @@ export default function AdminPage() {
     }
   };
 
-  const tabs: Array<{ id: Tab; label: string; icon: any }> = [
+  const tabs: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
     { id: "resumo", label: "Resumo", icon: Calendar },
     { id: "marca", label: "Marca", icon: Settings },
     { id: "servicos", label: "Serviços", icon: Scissors },
@@ -314,6 +323,7 @@ export default function AdminPage() {
                   </div>
                   <div className="mt-4">
                     <p className="mb-2 text-sm text-gray-400">QR Code:</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(bookingUrl)}`}
                       alt="QR Code"
@@ -442,7 +452,7 @@ export default function AdminPage() {
                 <div>
                   <h2 className="mb-4 text-lg font-semibold">Horário Semanal</h2>
                   <div className="space-y-2">
-                    {weeklyHours.map((wh: any) => (
+                    {weeklyHours.map((wh) => (
                       <div key={wh.day_of_week} className="rounded-lg border border-white/10 bg-[#161616] p-4">
                         <p className="text-sm font-medium text-gray-300">
                           {["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][wh.day_of_week]}
@@ -473,7 +483,7 @@ export default function AdminPage() {
                     {scheduleBreaks.length === 0 && (
                       <p className="text-sm text-gray-500">Nenhuma pausa cadastrada.</p>
                     )}
-                    {scheduleBreaks.map((sb: any) => (
+                    {scheduleBreaks.map((sb) => (
                       <div
                         key={sb.id}
                         className="flex items-center justify-between rounded-lg border border-white/10 bg-[#161616] p-3"
@@ -504,7 +514,7 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {closedDates.map((cd: any) => (
+                    {closedDates.map((cd) => (
                       <div
                         key={cd.id}
                         className="flex items-center justify-between rounded-lg border border-white/10 bg-[#161616] p-3"
@@ -606,10 +616,11 @@ export default function AdminPage() {
                   Defina a foto (URL) de cada barbeiro. A exibição no chat depende da política “Mostrar fotos”.
                 </p>
                 <div className="space-y-2">
-                  {barbers.map((b: any) => (
+                  {barbers.map((b) => (
                     <div key={b.id} className="rounded-lg border border-white/10 bg-[#161616] p-4">
                       <div className="flex items-start gap-3">
                         {b.avatar_url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
                           <img
                             src={b.avatar_url}
                             alt={b.name}
@@ -684,7 +695,7 @@ export default function AdminPage() {
                   <div>
                     <h3 className="mb-2 text-sm font-medium text-gray-300">Por Barbeiro</h3>
                     <div className="space-y-2">
-                      {financeSummary.by_barber.map((bb: any) => (
+                      {financeSummary.by_barber.map((bb) => (
                         <div key={bb.id} className="rounded-lg border border-white/10 bg-[#161616] p-4">
                           <p className="font-medium">{bb.name}</p>
                           <p className="text-sm text-gray-400">

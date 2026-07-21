@@ -102,6 +102,60 @@ export type OwnerSettings = {
   show_barber_photos: boolean;
 };
 
+export type AdminService = {
+  id: number;
+  name: string;
+  duration_minutes: number;
+  price_cents: number;
+  is_active: boolean;
+};
+
+export type WeeklyHour = {
+  id?: number;
+  day_of_week: number;
+  open_time: string | null;
+  close_time: string | null;
+  break_start: string | null;
+  break_end: string | null;
+  is_closed: boolean;
+};
+
+export type AdminScheduleBreak = {
+  id: number;
+  label: string;
+  start_time: string;
+  end_time: string;
+};
+
+export type AdminClosedDate = {
+  id: number;
+  date: string;
+  reason?: string | null;
+};
+
+export type AdminBarber = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  avatar_url?: string | null;
+};
+
+export type FinanceBarberBreakdown = {
+  id: number;
+  name: string;
+  completed_count: number;
+  revenue_cents: number;
+  commission_cents: number;
+};
+
+export type FinanceSummary = {
+  date: string;
+  completed_count: number;
+  total_revenue_cents: number;
+  by_barber?: FinanceBarberBreakdown[];
+};
+
 export async function getSettings() {
   return adminRequest<OwnerSettings>(`/api/v1/settings`);
 }
@@ -111,7 +165,7 @@ export async function updateSettings(body: Partial<{
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
-  accent_color: string;
+  accent_color: string | null;
   booking_lead_minutes: number;
   cancellation_hours_notice: number;
   commission_enabled: boolean;
@@ -125,7 +179,7 @@ export async function updateSettings(body: Partial<{
 }
 
 export async function getServices() {
-  return adminRequest<any[]>(`/api/v1/staff/services`);
+  return adminRequest<AdminService[]>(`/api/v1/staff/services`);
 }
 
 export async function createService(body: {
@@ -154,7 +208,7 @@ export async function updateService(id: number, body: {
 }
 
 export async function getWeeklyHours() {
-  return adminRequest<any[]>(`/api/v1/business-hours`);
+  return adminRequest<WeeklyHour[]>(`/api/v1/business-hours`);
 }
 
 export async function updateWeeklyHours(days: Array<{
@@ -172,7 +226,7 @@ export async function updateWeeklyHours(days: Array<{
 }
 
 export async function getScheduleBreaks() {
-  return adminRequest<any[]>(`/api/v1/schedule-breaks`);
+  return adminRequest<AdminScheduleBreak[]>(`/api/v1/schedule-breaks`);
 }
 
 export async function createScheduleBreak(body: {
@@ -194,7 +248,7 @@ export async function deleteScheduleBreak(id: number) {
 }
 
 export async function getClosedDates() {
-  return adminRequest<any[]>(`/api/v1/closed-dates`);
+  return adminRequest<AdminClosedDate[]>(`/api/v1/closed-dates`);
 }
 
 export async function createClosedDate(body: { date: string; reason?: string }) {
@@ -211,7 +265,7 @@ export async function deleteClosedDate(id: number) {
 }
 
 export async function getBarbers() {
-  return adminRequest<any[]>(`/api/v1/staff/barbers`);
+  return adminRequest<AdminBarber[]>(`/api/v1/staff/barbers`);
 }
 
 export async function updateBarber(id: number, body: {
@@ -228,7 +282,7 @@ export async function updateBarber(id: number, body: {
 }
 
 export async function getFinanceSummary(date: string) {
-  return adminRequest<any>(`/api/v1/finance/summary?date=${date}`);
+  return adminRequest<FinanceSummary>(`/api/v1/finance/summary?date=${date}`);
 }
 
 export function getStoredTenantSlug() {
