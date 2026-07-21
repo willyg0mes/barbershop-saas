@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
-import { format } from "date-fns";
+import { addDays, format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -20,25 +20,30 @@ import type { Appointment } from "@/lib/types";
 export default function AgendaScreen() {
   const router = useRouter();
   const { token, user, signOut } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const today = format(new Date(), "yyyy-MM-dd");
-  const todayLabel = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
+  const selected = useMemo(() => parseISO(selectedDate), [selectedDate]);
+  const today = useMemo(() => new Date(), []);
+  const isToday = isSameDay(selected, today);
+  const isTomorrow = isSameDay(selected, addDays(today, 1));
+
+  const dateLabel = format(selected, "EEEE, dd 'de' MMMM", { locale: ptBR });
 
   const loadAppointments = useCallback(async () => {
     if (!token) return;
 
     try {
       setError(null);
-      const data = await fetchAppointments(token, today);
+      const data = await fetchAppointments(token, selectedDate);
       setAppointments(data);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Erro ao carregar agenda");
     }
-  }, [token, today]);
+  }, [token, selectedDate]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -54,15 +59,46 @@ export default function AgendaScreen() {
     })();
   }, [loadAppointments]);
 
+  function shiftDay(offset: number) {
+    setSelectedDate((current) =>
+      format(addDays(parseISO(current), offset), "yyyy-MM-dd"),
+    );
+  }
+
   return (
     <Screen style={styles.screen}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerText}>
           <Text style={styles.greeting}>Olá, {user?.name.split(" ")[0]}</Text>
-          <Text style={styles.date}>{todayLabel}</Text>
+          <Text style={styles.date}>{dateLabel}</Text>
         </View>
         <Pressable onPress={signOut} style={styles.logout}>
           <Text style={styles.logoutText}>Sair</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.dateNav}>
+        <Pressable onPress={() => shiftDay(-1)} style={styles.navArrow}>
+          <Text style={styles.navArrowText}>‹</Text>
+        </Pressable>
+
+        <View style={styles.chips}>
+          <Pressable
+            onPress={() => setSelectedDate(format(today, "yyyy-MM-dd"))}
+            style={[styles.chip, isToday && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, isToday && styles.chipTextActive]}>Hoje</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setSelectedDate(format(addDays(today, 1), "yyyy-MM-dd"))}
+            style={[styles.chip, isTomorrow && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, isTomorrow && styles.chipTextActive]}>Amanhã</Text>
+          </Pressable>
+        </View>
+
+        <Pressable onPress={() => shiftDay(1)} style={styles.navArrow}>
+          <Text style={styles.navArrowText}>›</Text>
         </Pressable>
       </View>
 
@@ -77,8 +113,14 @@ export default function AgendaScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Nenhum horário hoje</Text>
-              <Text style={styles.emptyText}>Puxe para atualizar quando chegar um novo agendamento.</Text>
+              <Text style={styles.emptyTitle}>
+                {isToday ? "Nenhum horário hoje" : "Nenhum horário neste dia"}
+              </Text>
+              <Text style={styles.emptyText}>
+                {isToday
+                  ? "Novos agendamentos em outros dias aparecem em Amanhã ou nas setas."
+                  : "Puxe para atualizar ou mude a data."}
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -104,7 +146,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  headerText: {
+    flex: 1,
+    paddingRight: 12,
   },
   greeting: {
     color: "#fff",
@@ -127,6 +173,54 @@ const styles = StyleSheet.create({
     color: "#d1d5db",
     fontSize: 13,
     fontWeight: "600",
+  },
+  dateNav: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  navArrow: {
+    alignItems: "center",
+    backgroundColor: "#161616",
+    borderColor: "#2a2a2a",
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  navArrowText: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "600",
+    lineHeight: 28,
+  },
+  chips: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 8,
+  },
+  chip: {
+    alignItems: "center",
+    backgroundColor: "#161616",
+    borderColor: "#2a2a2a",
+    borderRadius: 999,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 10,
+  },
+  chipActive: {
+    backgroundColor: "rgba(212, 175, 55, 0.18)",
+    borderColor: "#D4AF37",
+  },
+  chipText: {
+    color: "#9ca3af",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  chipTextActive: {
+    color: "#D4AF37",
   },
   loader: {
     marginTop: 40,
