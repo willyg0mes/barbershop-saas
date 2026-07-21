@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useDialog } from "@/components/DialogProvider";
+import { ColorPickerField } from "@/components/ColorPickerField";
 import { Screen } from "@/components/Screen";
 import {
   createClosedDate,
@@ -114,7 +115,11 @@ export default function SettingsScreen() {
     })();
   }, [load]);
 
-  if (user?.role !== "owner") {
+  if (!user) {
+    return null;
+  }
+
+  if (user.role !== "owner") {
     return <Redirect href="/(app)" />;
   }
 
@@ -267,42 +272,24 @@ export default function SettingsScreen() {
           <Image source={{ uri: logoUrl.trim() }} style={styles.logoPreview} resizeMode="contain" />
         ) : null}
         <View style={styles.colorRow}>
-          <View style={styles.colorField}>
-            <Text style={styles.fieldLabel}>Primária</Text>
-            <TextInput
-              value={primaryColor}
-              onChangeText={setPrimaryColor}
-              placeholder="#D4AF37"
-              placeholderTextColor="#6b7280"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-            <View style={[styles.colorSwatch, { backgroundColor: primaryColor || "#D4AF37" }]} />
-          </View>
-          <View style={styles.colorField}>
-            <Text style={styles.fieldLabel}>Secundária</Text>
-            <TextInput
-              value={secondaryColor}
-              onChangeText={setSecondaryColor}
-              placeholder="#1a1a1a"
-              placeholderTextColor="#6b7280"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-            <View style={[styles.colorSwatch, { backgroundColor: secondaryColor || "#1a1a1a" }]} />
-          </View>
-          <View style={styles.colorField}>
-            <Text style={styles.fieldLabel}>Destaque</Text>
-            <TextInput
-              value={accentColor}
-              onChangeText={setAccentColor}
-              placeholder="#C5A028"
-              placeholderTextColor="#6b7280"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-            <View style={[styles.colorSwatch, { backgroundColor: accentColor || "#C5A028" }]} />
-          </View>
+          <ColorPickerField
+            label="Primária"
+            value={primaryColor}
+            onChange={setPrimaryColor}
+            placeholder="#D4AF37"
+          />
+          <ColorPickerField
+            label="Secundária"
+            value={secondaryColor}
+            onChange={setSecondaryColor}
+            placeholder="#1A1A1A"
+          />
+          <ColorPickerField
+            label="Destaque"
+            value={accentColor}
+            onChange={setAccentColor}
+            placeholder="#C5A028"
+          />
         </View>
         <Pressable
           disabled={savingSettings}
@@ -1172,21 +1159,8 @@ const styles = StyleSheet.create({
     width: 120,
   },
   colorRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  colorField: {
-    flex: 1,
-    gap: 6,
-    minWidth: 96,
-  },
-  colorSwatch: {
-    borderColor: "#2a2a2a",
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 28,
-    width: "100%",
+    flexDirection: "column",
+    gap: 12,
   },
   secondaryButton: {
     alignItems: "center",

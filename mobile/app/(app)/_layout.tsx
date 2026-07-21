@@ -1,11 +1,19 @@
-import { Redirect, Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet } from "react-native";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/lib/auth";
 
 export default function AppLayout() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/");
+    }
+  }, [loading, user, router]);
 
   if (loading) {
     return (
@@ -16,7 +24,11 @@ export default function AppLayout() {
   }
 
   if (!user) {
-    return <Redirect href="/" />;
+    return (
+      <Screen style={styles.center}>
+        <ActivityIndicator color="#D4AF37" size="large" />
+      </Screen>
+    );
   }
 
   return (

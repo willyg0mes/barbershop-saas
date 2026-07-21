@@ -33,6 +33,7 @@ export type Barber = {
   role: string;
   phone: string | null;
   tenant_id: number;
+  avatar_url?: string | null;
 };
 
 export type AvailabilityBarber = {

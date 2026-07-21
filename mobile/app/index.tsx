@@ -1,4 +1,4 @@
-import { Redirect } from "expo-router";
+import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,28 +9,31 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/lib/auth";
 
 export default function LoginScreen() {
   const { user, loading, signIn, tenantSlug } = useAuth();
+  const router = useRouter();
   const [slug, setSlug] = useState(tenantSlug);
   const [email, setEmail] = useState("barber@domcorte.test");
   const [password, setPassword] = useState("password");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/(app)");
+    }
+  }, [loading, user, router]);
+
+  if (loading || user) {
     return (
       <Screen style={styles.center}>
         <ActivityIndicator color="#D4AF37" size="large" />
       </Screen>
     );
-  }
-
-  if (user) {
-    return <Redirect href="/(app)" />;
   }
 
   async function handleLogin() {

@@ -61,7 +61,9 @@ export function ChatBooking({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<BookingStep>("services");
   const [serviceIds, setServiceIds] = useState<number[]>([]);
+  /** null = qualquer barbeiro (só após escolher no passo barber / slot) */
   const [barberId, setBarberId] = useState<number | null>(null);
+  const [barberAny, setBarberAny] = useState(false);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [slot, setSlot] = useState<string | null>(null);
   const [clientName, setClientName] = useState("");
@@ -150,6 +152,7 @@ export function ChatBooking({
       const payload = await fetchAvailability(tenant.slug, {
         date,
         serviceIds,
+        barberId: barberAny ? undefined : (barberId ?? undefined),
       });
       setAvailability(payload);
     } catch (caught) {
@@ -158,17 +161,20 @@ export function ChatBooking({
     } finally {
       setLoadingAvailability(false);
     }
-  }, [date, serviceIds, tenant.slug]);
+  }, [date, serviceIds, tenant.slug, barberId, barberAny]);
 
   useEffect(() => {
     if (step === "datetime") void loadAvailability();
-  }, [step, loadAvailability, date, serviceIds]);
+  }, [step, loadAvailability, date, serviceIds, barberId, barberAny]);
 
   const goBack = useCallback(() => {
     vibrate(5);
 
     if (step === "confirm") {
       setSlot(null);
+      if (barberAny) {
+        setBarberId(null);
+      }
       setStep("datetime");
       pushMessage("user", "← Alterar horário");
       botReply("Sem problemas! Escolhe outra data ou horário.");
@@ -177,9 +183,27 @@ export function ChatBooking({
 
     if (step === "datetime") {
       setSlot(null);
-      setBarberId(null);
-      setDate(format(new Date(), "yyyy-MM-dd"));
       setAvailability(null);
+      if (barbers.length > 1) {
+        setBarberId(null);
+        setBarberAny(false);
+        setStep("barber");
+        pushMessage("user", "← Voltar");
+        botReply("Escolhe o barbeiro de novo.");
+      } else {
+        setBarberId(null);
+        setBarberAny(false);
+        setDate(format(new Date(), "yyyy-MM-dd"));
+        setStep("services");
+        pushMessage("user", "← Voltar");
+        botReply("Beleza! Escolhe os serviços de novo.");
+      }
+      return;
+    }
+
+    if (step === "barber") {
+      setBarberId(null);
+      setBarberAny(false);
       setStep("services");
       pushMessage("user", "← Voltar");
       botReply("Beleza! Escolhe os serviços de novo.");
@@ -187,7 +211,7 @@ export function ChatBooking({
     }
 
     window.history.back();
-  }, [step, pushMessage, botReply]);
+  }, [step, pushMessage, botReply, barbers.length, barberAny]);
 
   const toggleService = useCallback((id: number) => {
     vibrate(5);
@@ -206,12 +230,22 @@ export function ChatBooking({
       `${label} · ${totalMinutes} min · R$ ${(totalPrice / 100).toFixed(2).replace(".", ",")}`,
     );
 
-    botReply(
-      barbers.length === 1
-        ? `Fechou! Escolhe a data e o horário com ${barbers[0].name.split(" ")[0]}.`
-        : "Boa! Escolhe a data — mostro os horários disponíveis de cada barbeiro.",
-      "datetime",
-    );
+    if (barbers.length === 0) {
+      botReply("No momento não há barbeiros disponíveis. Tente mais tarde.");
+      return;
+    }
+
+    if (barbers.length === 1) {
+      setBarberId(barbers[0].id);
+      setBarberAny(false);
+      botReply(
+        `Fechou! Escolhe a data e o horário com ${barbers[0].name.split(" ")[0]}.`,
+        "datetime",
+      );
+      return;
+    }
+
+    botReply("Agora escolhe o barbeiro — ou deixe qualquer um disponível.", "barber");
   }, [
     serviceIds.length,
     selectedServices,
@@ -221,6 +255,31 @@ export function ChatBooking({
     botReply,
     barbers,
   ]);
+
+  const confirmBarber = useCallback(
+    (selectedId: number | null) => {
+      vibrate(10);
+      if (selectedId === null) {
+        setBarberId(null);
+        setBarberAny(true);
+        pushMessage("user", "Qualquer barbeiro");
+        botReply("Beleza! Escolhe a data — mostro horários de quem estiver livre.", "datetime");
+        return;
+      }
+
+      const barber = barbers.find((b) => b.id === selectedId);
+      if (!barber) return;
+
+      setBarberId(selectedId);
+      setBarberAny(false);
+      pushMessage("user", barber.name);
+      botReply(
+        `Fechou com ${barber.name.split(" ")[0]}! Escolhe a data e o horário.`,
+        "datetime",
+      );
+    },
+    [barbers, pushMessage, botReply],
+  );
 
   const confirmSlot = useCallback((selectedBarberId: number, value: string) => {
     vibrate(10);
@@ -238,8 +297,10 @@ export function ChatBooking({
     const next = format(addDays(new Date(), offset), "yyyy-MM-dd");
     setDate(next);
     setSlot(null);
-    setBarberId(null);
-  }, []);
+    if (barberAny) {
+      setBarberId(null);
+    }
+  }, [barberAny]);
 
   const submitBooking = async () => {
     if (!barberId || !slot || !clientName.trim()) return;
@@ -276,6 +337,7 @@ export function ChatBooking({
     setStep("services");
     setServiceIds([]);
     setBarberId(null);
+    setBarberAny(false);
     setDate(format(new Date(), "yyyy-MM-dd"));
     setSlot(null);
     setClientName("");
@@ -307,6 +369,24 @@ export function ChatBooking({
         active: serviceIds.includes(service.id),
         onClick: () => toggleService(service.id),
       }));
+    }
+
+    if (step === "barber") {
+      return [
+        ...barbers.map((barber) => ({
+          id: `barber-${barber.id}`,
+          label: barber.name.split(" ")[0],
+          active: barberId === barber.id && !barberAny,
+          onClick: () => confirmBarber(barber.id),
+        })),
+        {
+          id: "any-barber",
+          label: "Qualquer",
+          active: barberAny,
+          onClick: () => confirmBarber(null),
+        },
+        { id: "back", label: "← Voltar", onClick: goBack },
+      ];
     }
 
     if (step === "datetime") {
@@ -351,12 +431,16 @@ export function ChatBooking({
     step,
     services,
     serviceIds,
+    barbers,
+    barberId,
+    barberAny,
     date,
     appointment,
     selectedServices,
     tenant,
     restart,
     toggleService,
+    confirmBarber,
     setQuickDate,
     goBack,
   ]);
@@ -433,11 +517,13 @@ export function ChatBooking({
             hint={
               step === "services"
                 ? "Toque rápido"
-                : step === "datetime"
-                  ? "Datas rápidas"
-                  : step === "confirm"
-                    ? "Ajustar"
-                    : undefined
+                : step === "barber"
+                  ? "Barbeiros"
+                  : step === "datetime"
+                    ? "Datas rápidas"
+                    : step === "confirm"
+                      ? "Ajustar"
+                      : undefined
             }
             replies={quickReplies}
           />
@@ -516,6 +602,74 @@ export function ChatBooking({
         </ChatBubble>
       ) : null}
 
+      {!typing && step === "barber" ? (
+        <ChatBubble role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold">Escolha o barbeiro</p>
+              <button type="button" onClick={goBack} className="chat-back-link">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Serviços
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {barbers.map((barber) => {
+                const active = barberId === barber.id && !barberAny;
+                return (
+                  <button
+                    key={barber.id}
+                    type="button"
+                    onClick={() => confirmBarber(barber.id)}
+                    className={cn(
+                      "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left active:scale-[0.98]",
+                      active
+                        ? "border-[var(--tenant-secondary)] bg-[var(--tenant-secondary)]/12"
+                        : "border-white/10 bg-background/50",
+                    )}
+                  >
+                    {tenant.settings.show_barber_photos && barber.avatar_url ? (
+                      <img
+                        src={barber.avatar_url}
+                        alt={barber.name}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <ChatAvatar variant="barber" name={barber.name} className="h-10 w-10 text-sm" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{barber.name}</p>
+                      <p className="text-xs text-muted-foreground">Ver horários deste barbeiro</p>
+                    </div>
+                    {active ? (
+                      <Check className="h-4 w-4 shrink-0 text-[var(--tenant-secondary)]" />
+                    ) : null}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => confirmBarber(null)}
+                className={cn(
+                  "mobile-touch-card flex items-center gap-3 rounded-2xl border px-3 py-3 text-left active:scale-[0.98]",
+                  barberAny
+                    ? "border-[var(--tenant-secondary)] bg-[var(--tenant-secondary)]/12"
+                    : "border-white/10 bg-background/50",
+                )}
+              >
+                <ChatAvatar variant="barber" name="?" className="h-10 w-10 text-sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Qualquer barbeiro</p>
+                  <p className="text-xs text-muted-foreground">Mostra todos os horários livres</p>
+                </div>
+                {barberAny ? (
+                  <Check className="h-4 w-4 shrink-0 text-[var(--tenant-secondary)]" />
+                ) : null}
+              </button>
+            </div>
+          </div>
+        </ChatBubble>
+      ) : null}
+
       {!typing && step === "datetime" ? (
         <ChatBubble wide role="bot" tenantName={tenant.name} tenantLogo={tenant.logo_url}>
           <div className="space-y-4">
@@ -523,9 +677,26 @@ export function ChatBooking({
               <p className="font-semibold">Escolha a data</p>
               <button type="button" onClick={goBack} className="chat-back-link">
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Serviços
+                {barbers.length > 1 ? "Barbeiro" : "Serviços"}
               </button>
             </div>
+
+            {selectedBarber && !barberAny ? (
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-background/40 px-3 py-2">
+                {tenant.settings.show_barber_photos && selectedBarber.avatar_url ? (
+                  <img
+                    src={selectedBarber.avatar_url}
+                    alt={selectedBarber.name}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <ChatAvatar variant="barber" name={selectedBarber.name} className="h-8 w-8 text-xs" />
+                )}
+                <p className="text-sm font-medium">{selectedBarber.name}</p>
+              </div>
+            ) : barberAny ? (
+              <p className="text-xs text-muted-foreground">Mostrando horários de todos os barbeiros</p>
+            ) : null}
 
             <ChatDatePicker
               value={date}
@@ -533,7 +704,9 @@ export function ChatBooking({
               onChange={(next) => {
                 setDate(next);
                 setSlot(null);
-                setBarberId(null);
+                if (barberAny) {
+                  setBarberId(null);
+                }
               }}
             />
 
