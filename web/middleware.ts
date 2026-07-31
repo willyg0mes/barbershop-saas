@@ -63,25 +63,35 @@ export async function middleware(request: NextRequest) {
 
     if (subdomain) {
       try {
-        const apiBase = process.env.API_URL || "http://127.0.0.1:8080";
+        const apiBase = process.env.API_URL || "http://nginx:8080";
         const response = await fetch(
-          `${apiBase}/api/v1/tenants/resolve?host=${encodeURIComponent(subdomain)}`,
-          { next: { revalidate: 300 } },
+          `${apiBase}/api/v1/tenants/resolve?host=${encodeURIComponent(hostname)}`,
+          { next: { revalidate: 60 } },
         );
 
         if (response.ok) {
           const payload = await response.json();
           tenantSlug = payload.slug;
+        } else {
+          // fallback: tenta só o label do subdomínio
+          const byLabel = await fetch(
+            `${apiBase}/api/v1/tenants/resolve?host=${encodeURIComponent(subdomain)}`,
+            { next: { revalidate: 60 } },
+          );
+          if (byLabel.ok) {
+            const payload = await byLabel.json();
+            tenantSlug = payload.slug;
+          }
         }
       } catch {
-        tenantSlug = subdomain;
+        tenantSlug = null;
       }
     } else if (hostname !== "localhost" && hostname !== "127.0.0.1") {
       try {
-        const apiBase = process.env.API_URL || "http://127.0.0.1:8080";
+        const apiBase = process.env.API_URL || "http://nginx:8080";
         const response = await fetch(
           `${apiBase}/api/v1/tenants/resolve?host=${encodeURIComponent(hostname)}`,
-          { next: { revalidate: 300 } },
+          { next: { revalidate: 60 } },
         );
 
         if (response.ok) {
