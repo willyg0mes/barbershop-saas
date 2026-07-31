@@ -3,6 +3,10 @@
 #   barber.wynext.online  → API Laravel (app barbeiro / mobile)
 #   app.wynext.online     → PWA cliente (Next.js)
 #   *.wynext.online       → tenants por subdomínio (ex: domcorte.wynext.online)
+#
+# Nome do projeto Compose fixo — evita volume Postgres novo se a pasta mudar
+# (ex.: /var/www/app/products/barber).
+name: barbershop-saas
 
 services:
   postgres:
