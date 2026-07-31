@@ -1,5 +1,10 @@
 # BarberShop SaaS
 
+> **Produto Wynext:** `barber` · Domínio base [`wynext.online`](https://wynext.online)  
+> Hosts: `barber.wynext.online` (API) · `app.wynext.online` (PWA) · `{tenant}.wynext.online`  
+> Tenants sem domínio próprio usam subdomínio em `wynext.online`. Controle central: monorepo `platform` (control-plane).  
+> Repo: https://github.com/willyg0mes/barbershop-saas
+
 SaaS multi-tenant de agendamento para barbearias.
 
 | Camada | Stack | Pasta |
