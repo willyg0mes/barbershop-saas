@@ -2,7 +2,8 @@
 
 > **Produto Wynext:** `barber` · Domínio base [`wynext.online`](https://wynext.online)  
 > Hosts: `barber.wynext.online` (API) · `app.wynext.online` (PWA) · `{tenant}.wynext.online`  
-> Tenants sem domínio próprio usam subdomínio em `wynext.online`. Controle central: monorepo `platform` (control-plane).  
+> Tenants sem domínio próprio usam subdomínio em `wynext.online`. Controle central: [wynext-platform](https://github.com/willyg0mes/wynext-platform)  
+> Sync com control-plane: `php artisan wynext:sync-tenants` (env `WYNEXT_PLATFORM_*`)  
 > Repo: https://github.com/willyg0mes/barbershop-saas
 
 SaaS multi-tenant de agendamento para barbearias.

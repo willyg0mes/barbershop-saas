@@ -11,6 +11,10 @@ use Illuminate\Support\Str;
 
 class TenantProvisioningService
 {
+    public function __construct(
+        private readonly WynextPlatformSyncService $platformSync,
+    ) {}
+
     /**
      * @param  array{
      *     name: string,
@@ -27,11 +31,12 @@ class TenantProvisioningService
      */
     public function create(array $data): array
     {
-        return DB::transaction(function () use ($data) {
+        $result = DB::transaction(function () use ($data) {
             $slug = Str::slug($data['slug']);
             $subdomain = str_replace('-', '', $slug);
 
             $tenant = Tenant::query()->create([
+                'product' => Tenant::PRODUCT,
                 'name' => $data['name'],
                 'slug' => $slug,
                 'subdomain' => $subdomain,
@@ -49,7 +54,6 @@ class TenantProvisioningService
                     'show_barber_photos' => true,
                 ],
             ]);
-
             $owner = User::query()->create([
                 'tenant_id' => $tenant->id,
                 'name' => $data['owner_name'],
@@ -82,10 +86,16 @@ class TenantProvisioningService
 
             return ['tenant' => $tenant, 'owner' => $owner];
         });
+
+        $this->platformSync->sync($result['tenant']);
+
+        return $result;
     }
 
     public function delete(Tenant $tenant): void
     {
+        $slug = $tenant->slug;
+
         DB::transaction(function () use ($tenant): void {
             // users usam nullOnDelete — remover antes do tenant
             $tenant->users()->each(function (User $user): void {
@@ -94,5 +104,7 @@ class TenantProvisioningService
             });
             $tenant->delete();
         });
+
+        $this->platformSync->deleteBySlug($slug);
     }
 }

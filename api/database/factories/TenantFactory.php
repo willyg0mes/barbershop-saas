@@ -16,6 +16,7 @@ class TenantFactory extends Factory
         $slug = str()->slug($name);
 
         return [
+            'product' => Tenant::PRODUCT,
             'name' => $name,
             'slug' => $slug,
             'subdomain' => $slug,

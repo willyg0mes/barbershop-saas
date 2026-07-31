@@ -98,6 +98,7 @@ class PlatformTenantController extends Controller
         }
 
         $model->save();
+        app(\App\Services\WynextPlatformSyncService::class)->sync($model);
 
         if (isset($data['owner_name']) || isset($data['owner_email']) || isset($data['owner_password'])) {
             $owner = User::query()
@@ -139,9 +140,13 @@ class PlatformTenantController extends Controller
     {
         return [
             'id' => $tenant->id,
+            'product' => $tenant->product ?? Tenant::PRODUCT,
             'name' => $tenant->name,
             'slug' => $tenant->slug,
             'subdomain' => $tenant->subdomain,
+            'custom_domain' => $tenant->custom_domain,
+            'platform_host' => $tenant->platformHost(),
+            'public_host' => $tenant->publicHost(),
             'primary_color' => $tenant->primary_color,
             'secondary_color' => $tenant->secondary_color,
             'accent_color' => $tenant->accent_color,

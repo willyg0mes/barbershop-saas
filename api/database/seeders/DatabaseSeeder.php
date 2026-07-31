@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call(PlatformAdminSeeder::class);
 
         $tenant = Tenant::query()->create([
+            'product' => Tenant::PRODUCT,
             'name' => 'Barbearia Dom Corte',
             'slug' => 'dom-corte',
             'subdomain' => 'domcorte',

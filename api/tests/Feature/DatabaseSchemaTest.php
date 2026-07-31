@@ -62,7 +62,10 @@ class DatabaseSchemaTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        $this->assertDatabaseHas('tenants', ['slug' => 'schema-test']);
+        $this->assertDatabaseHas('tenants', [
+            'slug' => 'schema-test',
+            'product' => 'barber',
+        ]);
         $this->assertDatabaseHas('users', [
             'email' => 'barber@schema.test',
             'role' => UserRole::Barber->value,

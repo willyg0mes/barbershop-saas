@@ -11,7 +11,10 @@ class Tenant extends Model
     /** @use HasFactory<\Database\Factories\TenantFactory> */
     use HasFactory;
 
+    public const PRODUCT = 'barber';
+
     protected $fillable = [
+        'product',
         'name',
         'slug',
         'subdomain',
@@ -58,11 +61,28 @@ class Tenant extends Model
         return [
             'name' => $this->name,
             'slug' => $this->slug,
+            'product' => $this->product ?? self::PRODUCT,
             'logo_url' => $this->logo_url,
             'primary_color' => $this->primary_color,
             'secondary_color' => $this->secondary_color,
             'accent_color' => $this->accent_color,
         ];
+    }
+
+    public function platformHost(): string
+    {
+        $base = (string) config('wynext.base_domain', 'wynext.online');
+
+        return $this->subdomain.'.'.$base;
+    }
+
+    public function publicHost(): string
+    {
+        if (filled($this->custom_domain)) {
+            return (string) $this->custom_domain;
+        }
+
+        return $this->platformHost();
     }
 
     public function getRouteKeyName(): string
