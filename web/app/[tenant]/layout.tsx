@@ -1,5 +1,6 @@
 import { fetchTenantBranding } from "@/lib/api";
 import { contrastText, readableOn } from "@/lib/color";
+import { WynextFooterCredit } from "@/components/wynext-footer-credit";
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
@@ -62,8 +63,9 @@ export default async function TenantLayout({
     } as CSSProperties;
 
     return (
-      <div style={themeStyle} className="h-[100dvh] overflow-hidden bg-black">
-        {children}
+      <div style={themeStyle} className="flex h-[100dvh] flex-col overflow-hidden bg-black">
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+        <WynextFooterCredit />
       </div>
     );
   } catch {
